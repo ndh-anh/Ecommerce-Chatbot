@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { GoogleAuthService } from './google-auth.service';
 import {
   AUTH_CONTROLLER,
   BaseAuthController,
@@ -14,6 +15,7 @@ import { PrismaModule } from '@/common/services/prisma.module';
   controllers: [BaseAuthController],
   providers: [
     AuthService,
+    GoogleAuthService,
     {
       provide: AUTH_CONTROLLER,
       useClass: AuthController,

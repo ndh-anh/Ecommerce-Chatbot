@@ -14,14 +14,14 @@ import {
   useGetBrandsSuspense,
   useGetCategoriesSuspense,
 } from "@e-commerce/api-client/endpoints/product";
-import { userProductSearchContext } from "@/features/main/product/utils";
+import { userProductCatalogContext } from "@/features/main/product/utils";
 import SearchProvider from "@/providers/SearchProvider/SearchProvider";
 import { getUserProductsQueryParams } from "@e-commerce/api-validation/zod/product";
 import FilterBar from "./FilterBar";
 import FilterDialog from "./FilterDialog";
 
 const ProductListContent = () => {
-  const { params, setParams } = userProductSearchContext.useSearch();
+  const { params, setParams } = userProductCatalogContext.useSearch();
   const { data } = useGetUserProductsSuspense(params);
 
   // Accumulate products for "Load More" functionality
@@ -59,7 +59,7 @@ const ProductListContent = () => {
   }, [brandsData, params.brandIds]);
 
   // Local logic for selected categories
-  const categoryIdsParam = (params as any).categoryIds;
+  const categoryIdsParam = params.categoryIds;
   const selectedCategories = useMemo(() => {
     const categoryIdsArray = categoryIdsParam
       ? categoryIdsParam.split(",").filter(Boolean)
@@ -71,8 +71,8 @@ const ProductListContent = () => {
   }, [categoriesData, categoryIdsParam]);
 
   const handleRemoveCategory = (categoryIdToRemove: string) => {
-    const categoryIdsArray = (params as any).categoryIds
-      ? (params as any).categoryIds.split(",").filter(Boolean)
+    const categoryIdsArray = params.categoryIds
+      ? params.categoryIds.split(",").filter(Boolean)
       : [];
     const newCategoryIds = categoryIdsArray.filter(
       (id: string) => id !== categoryIdToRemove,
@@ -81,7 +81,7 @@ const ProductListContent = () => {
       page: 1,
       categoryIds:
         newCategoryIds.length > 0 ? newCategoryIds.join(",") : undefined,
-    } as any);
+    });
   };
 
   const handleRemoveBrand = (brandIdToRemove: string) => {
@@ -120,21 +120,21 @@ const ProductListContent = () => {
         selectedCategoryIds.length > 0
           ? selectedCategoryIds.join(",")
           : undefined,
-    } as any);
+    });
     setFilterDialogOpen(false);
   };
 
   const handleResetFilters = () => {
     setParams({
       page: 1,
-      keyword: undefined,
+      productName: undefined,
       brandIds: undefined,
       categoryIds: undefined,
       minPrice: undefined,
       maxPrice: undefined,
       sortBy: undefined,
       sortOrder: undefined,
-    } as any);
+    });
   };
 
   const handleSortChange = (
@@ -145,15 +145,15 @@ const ProductListContent = () => {
       page: 1,
       sortBy,
       sortOrder,
-    } as any);
+    });
   };
 
   const hasActiveFilters = !!(
     params.brandIds ||
-    (params as any).categoryIds ||
-    params.minPrice ||
-    params.maxPrice ||
-    params.keyword
+    params.categoryIds ||
+    params.minPrice !== undefined ||
+    params.maxPrice !== undefined ||
+    params.productName
   );
 
   return (
@@ -161,11 +161,11 @@ const ProductListContent = () => {
       {/* Thanh Filter nằm ngang ở dưới */}
       <FilterBar
         brandIds={params.brandIds}
-        categoryIds={(params as any).categoryIds}
+        categoryIds={params.categoryIds}
         minPrice={params.minPrice}
         maxPrice={params.maxPrice}
         sortBy={params.sortBy}
-        sortOrder={(params as any).sortOrder}
+        sortOrder={params.sortOrder}
         hasActiveFilters={hasActiveFilters}
         onOpenFilterDialog={() => setFilterDialogOpen(true)}
         onApplyPrice={handleApplyPrice}
@@ -304,7 +304,7 @@ const ProductListContent = () => {
           open={filterDialogOpen}
           onClose={() => setFilterDialogOpen(false)}
           brandIds={params.brandIds}
-          categoryIds={(params as any).categoryIds}
+          categoryIds={params.categoryIds}
           onApply={handleApplyFilters}
           brandsData={brandsData}
           categoriesData={categoriesData}
@@ -317,7 +317,7 @@ const ProductListContent = () => {
 const ProductList = () => {
   return (
     <SearchProvider
-      context={userProductSearchContext}
+      context={userProductCatalogContext}
       schema={getUserProductsQueryParams}
     >
       <ProductListContent />

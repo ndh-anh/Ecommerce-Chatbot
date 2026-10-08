@@ -1,0 +1,181 @@
+# Run with: docker compose --env-file .env.production -f docker-compose.hub.yaml up -d --no-build
+name: e-commerce-prod
+
+x-service: &service
+  restart: unless-stopped
+  init: true
+  networks:
+    - e-commerce-network-prod
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-database: &database
+  DB_HOST: ${DB_HOST:?Set the Supabase database host}
+  DB_PORT: ${DB_PORT:-5432}
+  DB_NAME: ${DB_NAME:-postgres}
+  DB_USERNAME: ${DB_USERNAME:?Set the Supabase database user}
+  DB_PASSWORD: ${DB_PASSWORD:?Set the Supabase database password}
+  PGSSLMODE: ${PGSSLMODE:-require}
+
+x-healthcheck: &healthcheck
+  interval: 15s
+  timeout: 5s
+  retries: 5
+  start_period: 60s
+
+services:
+  api:
+    <<: *service
+    image: ${DOCKERHUB_NAMESPACE:?Set your Docker Hub username or organization}/e-commerce-api:${IMAGE_TAG:?Set the image release tag}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    environment:
+      <<: *database
+      NODE_ENV: production
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      PORT: 8080
+      FRONTEND_URL: ${FRONTEND_URL:?Set the public frontend URL}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Set JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET}
+      OTP_EXPIRATION_MINUTES: ${OTP_EXPIRATION_MINUTES:-5}
+      RABBITMQ_URL: ${RABBITMQ_URL:?Set the cloud RabbitMQ URL}
+      ORDER_SERVICE_URL: order:50052
+      SEARCH_SERVICE_URL: search:50053
+      AI_ASSISTANT_SERVICE_URL: ai-assistant:50054
+      AWS_REGION: ${AWS_REGION:-ap-southeast-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-}
+      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL:-}
+    expose:
+      - "50051"
+    depends_on:
+      order:
+        condition: service_healthy
+      search:
+        condition: service_healthy
+      ai-assistant:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "node", "-e", "const s=require('net').connect(8080,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
+
+  frontend:
+    <<: *service
+    image: ${DOCKERHUB_NAMESPACE:?Set your Docker Hub username or organization}/e-commerce-front:${IMAGE_TAG:?Set the image release tag}
+    ports:
+      - "${FRONTEND_PORT:-80}:3000"
+    environment:
+      NODE_ENV: production
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      API_URL: ${API_URL:-http://api:8080}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set the public API URL}
+      NEXT_PUBLIC_ENABLE_MOCKS: "false"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "node", "-e", "const s=require('net').connect(3000,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
+
+  order:
+    <<: *service
+    image: ${DOCKERHUB_NAMESPACE:?Set your Docker Hub username or organization}/e-commerce-order:${IMAGE_TAG:?Set the image release tag}
+    environment:
+      <<: *database
+      NODE_ENV: production
+    expose:
+      - "50052"
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "node", "-e", "const s=require('net').connect(50052,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
+
+  search:
+    <<: *service
+    image: ${DOCKERHUB_NAMESPACE:?Set your Docker Hub username or organization}/e-commerce-search:${IMAGE_TAG:?Set the image release tag}
+    environment:
+      NODE_ENV: production
+      RABBITMQ_URL: ${RABBITMQ_URL:?Set the cloud RabbitMQ URL}
+      ELASTICSEARCH_NODE: http://elasticsearch:9200
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:?Set the search embedding API key}
+    expose:
+      - "50053"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "node", "-e", "const s=require('net').connect(50053,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
+
+  elasticsearch:
+    <<: *service
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
+    # Leave room for native memory and filesystem cache beyond the JVM heap.
+    mem_limit: 1g
+    memswap_limit: 1g
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.ml.enabled: "false"
+      node.store.allow_mmap: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    expose:
+      - "9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "curl -fsS 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s' | grep -Eq '\"status\"[[:space:]]*:[[:space:]]*\"(green|yellow)\"'"]
+      timeout: 10s
+      start_period: 90s
+
+  ai-assistant:
+    <<: *service
+    image: ${DOCKERHUB_NAMESPACE:?Set your Docker Hub username or organization}/ai-assistant:${IMAGE_TAG:?Set the image release tag}
+    environment:
+      DB_URI: ${DB_URI:?Set the Supabase PostgreSQL URI for AI checkpoints}
+      DASHSCOPE_API_KEY_AGENT_1: ${DASHSCOPE_API_KEY_AGENT_1:?Set the AI agent API key}
+      DASHSCOPE_API_KEY_AGENT_2: ${DASHSCOPE_API_KEY_AGENT_2:?Set the support agent API key}
+      ORDER_SERVICE_URL: order:50052
+      SEARCH_SERVICE_URL: search:50053
+      INVENTORY_SERVICE_URL: api:50051
+      LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+    expose:
+      - "50054"
+    depends_on:
+      order:
+        condition: service_healthy
+      search:
+        condition: service_healthy
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 50054), timeout=3).close()"]
+
+  # Optional one-off migration against Supabase; excluded from normal startup.
+  liquibase:
+    image: ${DOCKERHUB_NAMESPACE:?Set your Docker Hub username or organization}/e-commerce-migrations:${IMAGE_TAG:?Set the image release tag}
+    profiles: ["migration"]
+    environment:
+      LIQUIBASE_COMMAND_URL: ${LIQUIBASE_URL:-jdbc:postgresql://${DB_HOST}:${DB_PORT:-5432}/${DB_NAME:-postgres}?sslmode=require}
+      LIQUIBASE_COMMAND_USERNAME: ${DB_USERNAME}
+      LIQUIBASE_COMMAND_PASSWORD: ${DB_PASSWORD}
+      LIQUIBASE_COMMAND_CHANGELOG_FILE: db.changelog-master.yaml
+      LIQUIBASE_SEARCH_PATH: /liquibase/changelog
+    command: ["update", "-DadminPassword=${ADMIN_PASSWORD:-}"]
+    networks:
+      - e-commerce-network-prod
+
+networks:
+  e-commerce-network-prod:
+    driver: bridge
+
+volumes:
+  es_data:

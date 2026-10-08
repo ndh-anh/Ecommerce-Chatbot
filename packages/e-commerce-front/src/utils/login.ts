@@ -1,7 +1,13 @@
 "use server";
 
-import { postLogin } from "@e-commerce/api-client/endpoints/auth";
-import type { PostLoginBody } from "@e-commerce/api-validation/types/auth";
+import {
+  postLogin,
+  postGoogleLogin,
+} from "@e-commerce/api-client/endpoints/auth";
+import type {
+  PostLoginBody,
+  PostGoogleLoginBody,
+} from "@e-commerce/api-validation/types/auth";
 import { cookies } from "next/headers";
 
 export async function login(body: PostLoginBody) {
@@ -22,6 +28,25 @@ export async function login(body: PostLoginBody) {
     const code = error?.response?.data?.code || error?.code;
     const message = error?.response?.data?.message || error?.message;
     return { success: false, code, message };
+  }
+}
+
+export async function loginWithGoogle(body: PostGoogleLoginBody) {
+  try {
+    const data = await postGoogleLogin(body);
+    const cookieStore = await cookies();
+    cookieStore.set("refresh_token", data.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+    return { success: true, accessToken: data.accessToken };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error?.response?.data?.message || "Đăng nhập Google thất bại.",
+    };
   }
 }
 

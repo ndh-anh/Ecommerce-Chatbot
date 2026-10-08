@@ -11,11 +11,11 @@ function BaseTextField<TField extends FieldValues>({
     <TextField
       value={field?.value ?? ""}
       error={!!fieldError}
-      helperText={fieldError?.message}
       onChange={field?.onChange}
       onBlur={field?.onBlur}
       ref={field?.ref}
       {...props}
+      helperText={fieldError?.message || props.helperText}
     />
   );
 }

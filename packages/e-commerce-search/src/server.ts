@@ -9,7 +9,7 @@ import {
 } from "./buf/generated/product/v1/product";
 import { searchProducts } from "./handlers/product";
 import { esClient } from "./config/elasticsearch"; // Import esClient của bạn
-import { initRabbitMQConsumer } from "./rabbitmq";
+import { initRabbitMQConsumer, stopRabbitMQConsumer } from "./rabbitmq";
 
 // 1. Hàm kiểm tra kết nối và chuẩn bị Index Elasticsearch
 async function initElasticsearch(): Promise<void> {
@@ -29,6 +29,8 @@ async function initElasticsearch(): Promise<void> {
       index: "products",
       mappings: {
         properties: {
+          deleted: { type: "boolean" },
+          eventId: { type: "keyword" },
           productId: { type: "keyword" },
           productName: {
             type: "text",
@@ -58,6 +60,10 @@ async function initElasticsearch(): Promise<void> {
     console.log("Index 'products' created successfully.");
   }
 
+  await esClient.indices.putMapping({
+    index: "products",
+    properties: { deleted: { type: "boolean" }, eventId: { type: "keyword" } },
+  });
   console.log("Elasticsearch is ready.");
 }
 
@@ -115,3 +121,9 @@ async function bootstrap() {
 
 // Kích hoạt server
 bootstrap();
+
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.once(signal, () => {
+    void stopRabbitMQConsumer().finally(() => process.exit(0));
+  });
+}

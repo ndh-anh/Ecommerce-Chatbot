@@ -2,6 +2,14 @@ import { PolicyRule } from '@/common/decorators/check-policies.decorator';
 import { Operation } from '@e-commerce/api-validation/operations/operations';
 
 export const getPermissions: Record<Operation, PolicyRule[]> = {
+  getEvents: [['read', 'Event']],
+  getEventById: [['read', 'Event']],
+  postEvent: [['create', 'Event']],
+  patchEvent: [['update', 'Event']],
+  deleteEvent: [['delete', 'Event']],
+  getPublicEvents: [],
+  getEventBySlug: [],
+  getCarouselEvents: [],
   cancelOrder: [],
   deleteAddress: [],
   deleteBrand: [],
@@ -88,6 +96,7 @@ export const getPermissions: Record<Operation, PolicyRule[]> = {
   postCategory: [],
   postFlashSale: [],
   postLogin: [],
+  postGoogleLogin: [],
   postOrder: [],
   postOrderItem: [],
   postOrderVoucher: [],

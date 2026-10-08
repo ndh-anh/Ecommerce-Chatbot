@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - changeSet:
+      id: outbox-reliability-v1
+      author: codex
+      changes:
+        - sqlFile:
+            path: ../outbox-sql/outbox-reliability.sql
+            relativeToChangelogFile: true
+            splitStatements: false

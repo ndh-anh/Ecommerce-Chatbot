@@ -31,7 +31,8 @@ RUN pnpm --filter proto generate
 RUN pnpm --filter e-commerce-search build
 
 # Deploy isolated production environment
-RUN pnpm --filter e-commerce-search --prod deploy --legacy /app/out
+RUN pnpm --filter e-commerce-search --prod deploy --legacy /app/out \
+    && test -f /app/out/dist/server.js
 
 # ============================================
 # Stage 2: Run API application

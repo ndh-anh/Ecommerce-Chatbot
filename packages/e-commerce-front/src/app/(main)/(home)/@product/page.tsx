@@ -9,7 +9,7 @@ import {
 
 export default async function ProductSlot() {
   const queryClient = getQueryClient();
-  const params = { page: 1, pageSize: 8 };
+  const params = { page: 1, pageSize: 20 };
 
   await queryClient.prefetchQuery({
     queryKey: getGetUserProductsQueryKey(params),

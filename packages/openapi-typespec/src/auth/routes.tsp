@@ -9,6 +9,14 @@ using TypeSpec.OpenAPI;
 @route("/auth")
 namespace Auth.Auth {
     @post
+    @route("/google")
+    @operationId("postGoogleLogin")
+    @tag("auth")
+    @extension("x-public", true)
+    op googleLogin(@body body: GoogleLoginRequest):
+        AuthResponse200 | UnauthorizedError | BadRequestError | InternalServerError;
+
+    @post
     @route("/login")
     @operationId("postLogin")
     @tag("auth")

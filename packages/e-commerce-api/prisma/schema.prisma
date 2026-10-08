@@ -267,6 +267,7 @@ model users {
   user_roles          user_roles[]
   verification_tokens verification_tokens[]
   wishlists           wishlists[]
+  google_account      google_accounts?
 
   @@index([email], map: "idx_users_email")
   @@index([username], map: "idx_users_username")
@@ -425,4 +426,43 @@ model outbox_events {
   payload        Json     @db.JsonB
   status         String   @default("PENDING") @db.VarChar(50)
   created_at     DateTime @default(now()) @db.Timestamp(6)
+  event_version  BigInt   @default(0)
+  attempts       Int      @default(0)
+  next_attempt_at DateTime @default(now()) @db.Timestamp(6)
+  locked_until   DateTime? @db.Timestamp(6)
+  lock_token     String? @db.Uuid
+  last_error     String?
+  processed_at   DateTime? @db.Timestamp(6)
+
+  @@index([status, next_attempt_at, created_at, id], map: "idx_outbox_pending")
+  @@index([status, locked_until], map: "idx_outbox_lease")
+}
+
+model product_event_versions {
+  product_id String @id @db.Uuid
+  version BigInt
+}
+
+model google_accounts {
+  google_sub String @id @db.VarChar(255)
+  user_id String @unique @db.Uuid
+  users users @relation(fields: [user_id], references: [uid], onDelete: Cascade)
+}
+
+model events {
+  id String @id @db.Uuid
+  title String @db.VarChar(200)
+  slug String @unique @db.VarChar(200)
+  thumbnail_url String @db.VarChar(2048)
+  description String @db.Text
+  summary String @default("") @db.VarChar(500)
+  starts_at DateTime @db.Timestamptz(6)
+  ends_at DateTime @db.Timestamptz(6)
+  is_published Boolean @default(false)
+  show_on_carousel Boolean @default(true)
+  sort_order Int @default(0)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([is_published, show_on_carousel, starts_at, ends_at], map: "idx_events_carousel")
 }

@@ -6,14 +6,14 @@ Dự án gồm website bán hàng, trang quản trị và các dịch vụ backe
 
 ## Chatbot làm được gì?
 
-| Nhóm tác vụ | Chức năng trong code hiện tại |
-| --- | --- |
-| Tư vấn sản phẩm | Tìm theo từ khóa, danh mục, thương hiệu, khoảng giá và thứ tự sắp xếp; trả dữ liệu để giao diện hiển thị thẻ sản phẩm. |
-| Kiểm tra tồn kho | Tra cứu biến thể, SKU và số lượng tồn của sản phẩm. |
-| Xử lý đơn hàng | Thu thập thông tin đặt hàng, tạo đơn, tra cứu trạng thái và hủy đơn qua dịch vụ đơn hàng. |
-| Hỗ trợ khách hàng | Giải đáp chính sách đổi trả, bảo hành và giao hàng. Công cụ tra cứu hiện dùng nội dung mẫu cố định. |
-| Duy trì hội thoại | Lưu trạng thái bằng LangGraph checkpoint trên PostgreSQL và tải lại lịch sử chat. |
-| Xác nhận thao tác | Tạm dừng trước khi tạo hoặc hủy đơn để người dùng kiểm tra thông tin, xác nhận hoặc từ chối. |
+| Nhóm tác vụ       | Chức năng trong code hiện tại                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Tư vấn sản phẩm   | Tìm theo từ khóa, danh mục, thương hiệu, khoảng giá và thứ tự sắp xếp; trả dữ liệu để giao diện hiển thị thẻ sản phẩm. |
+| Kiểm tra tồn kho  | Tra cứu biến thể, SKU và số lượng tồn của sản phẩm.                                                                    |
+| Xử lý đơn hàng    | Thu thập thông tin đặt hàng, tạo đơn, tra cứu trạng thái và hủy đơn qua dịch vụ đơn hàng.                              |
+| Hỗ trợ khách hàng | Giải đáp chính sách đổi trả, bảo hành và giao hàng. Công cụ tra cứu hiện dùng nội dung mẫu cố định.                    |
+| Duy trì hội thoại | Lưu trạng thái bằng LangGraph checkpoint trên PostgreSQL và tải lại lịch sử chat.                                      |
+| Xác nhận thao tác | Tạm dừng trước khi tạo hoặc hủy đơn để người dùng kiểm tra thông tin, xác nhận hoặc từ chối.                           |
 
 Ví dụ yêu cầu có thể gửi cho chatbot:
 
@@ -130,15 +130,15 @@ API ghi nhận sự kiện sản phẩm qua outbox. Bộ xử lý outbox chuyể
 
 ## Công nghệ và cấu trúc
 
-| Thành phần | Công nghệ chính |
-| --- | --- |
-| Website và quản trị | Next.js, React, Material UI, TanStack Query |
-| Chatbot | Python, LangGraph, LangChain, Qwen qua DashScope |
-| API và dịch vụ đơn hàng | NestJS, Prisma, gRPC |
-| Tìm kiếm | TypeScript, Elasticsearch, DashScope embeddings |
-| Dữ liệu và sự kiện | PostgreSQL, Liquibase, RabbitMQ |
-| Contract và sinh code | TypeSpec, OpenAPI, Orval, Protocol Buffers, Buf |
-| Công cụ phát triển | pnpm workspace, Docker Compose, GitHub Actions |
+| Thành phần              | Công nghệ chính                                  |
+| ----------------------- | ------------------------------------------------ |
+| Website và quản trị     | Next.js, React, Material UI, TanStack Query      |
+| Chatbot                 | Python, LangGraph, LangChain, Qwen qua DashScope |
+| API và dịch vụ đơn hàng | NestJS, Prisma, gRPC                             |
+| Tìm kiếm                | TypeScript, Elasticsearch, DashScope embeddings  |
+| Dữ liệu và sự kiện      | PostgreSQL, Liquibase, RabbitMQ                  |
+| Contract và sinh code   | TypeSpec, OpenAPI, Orval, Protocol Buffers, Buf  |
+| Công cụ phát triển      | pnpm workspace, Docker Compose, GitHub Actions   |
 
 ```text
 packages/
@@ -224,29 +224,61 @@ Các khóa `DASHSCOPE_API_KEY`, `DASHSCOPE_API_KEY_AGENT_1` và
 Compose đặt `ELASTICSEARCH_NODE=http://elasticsearch:9200` cho Search Service và
 chờ ES healthy trước khi khởi động search. Elasticsearch production tắt authentication,
 chỉ mở cổng trong mạng Docker; các cổng gRPC cũng chỉ dùng trong mạng Docker.
-Mặc định frontend mở cổng `3000`, API mở cổng `8080`; cấu hình domain HTTPS qua
+Mặc định frontend mở cổng `80` (map vào cổng `3000` trong container), API mở cổng `8080`; cấu hình domain HTTPS qua
 reverse proxy của máy triển khai.
 
-### RAM và dữ liệu tìm kiếm
+### Build/push Docker Hub và chạy trên VPS
 
-Cả hai cấu hình Compose giới hạn container Elasticsearch ở **512 MB RAM**, không
-cho dùng thêm swap, đặt JVM heap **256 MB**, tắt ML và mmap. Embedding vẫn được tạo
-bằng DashScope bên ngoài Elasticsearch. Giới hạn này dành cho khoảng 300 sản phẩm
-và tải nhẹ; cần theo dõi mức sử dụng RAM khi cập nhật chỉ mục hoặc có nhiều truy vấn
-đồng thời. Kibana và các service khác dùng RAM riêng ngoài giới hạn này.
+`docker-compose.hub.yaml` dùng image đã publish, không build và không cần source
+code trên VPS. Hạ tầng và biến môi trường giống compose production: PostgreSQL
+trên Supabase, RabbitMQ cloud, Elasticsearch chạy trên VPS. Hai compose production
+dùng cùng project name `e-commerce-prod`, nên có thể chuyển sang image mà giữ volume ES.
 
-Dữ liệu Elasticsearch được lưu trong volume `es_data`; local và production có
-volume riêng theo project Compose. ES mới không tự nhận dữ liệu từ ES cloud:
-cần đồng bộ lại các sản phẩm hiện có từ PostgreSQL. Các thay đổi sản phẩm tiếp theo
-được cập nhật qua luồng RabbitMQ của Search Service. Không dùng
-`docker compose down -v` nếu cần giữ dữ liệu trong các volume.
+Trên máy build đã cài Docker/Buildx, đăng nhập Docker Hub bằng access token rồi push
+một tag cho toàn bộ năm ứng dụng và image migration:
+
+```bash
+docker login --username YOUR_DOCKERHUB_USERNAME
+bash scripts/push-dockerhub.sh YOUR_DOCKERHUB_USERNAME v1.0.0 https://api.example.com
+```
+
+Script mặc định build `linux/amd64`; với VPS ARM64, đặt `IMAGE_PLATFORM=linux/arm64`
+trước lệnh chạy script. `NEXT_PUBLIC_API_URL` được nhúng vào frontend lúc build;
+URL truyền vào script phải trùng với URL API công khai trong `.env.production`.
+Đổi URL này cần build/push lại frontend. Script dừng khi một image thất bại;
+chỉ triển khai tag sau khi tất cả image đã push thành công.
+
+Chỉ cần copy `docker-compose.hub.yaml` và `.env.production.example` lên VPS, sau đó:
+
+```bash
+cp .env.production.example .env.production
+# Điền các cấu hình production, DOCKERHUB_NAMESPACE và IMAGE_TAG=v1.0.0.
+chmod 600 .env.production
+# Đăng nhập Docker Hub trên VPS nếu repository image là private.
+docker compose --env-file .env.production -f docker-compose.hub.yaml config --quiet
+docker compose --env-file .env.production -f docker-compose.hub.yaml pull
+# Với database mới, điền ADMIN_PASSWORD và chạy migration trước khi khởi động:
+docker compose --env-file .env.production -f docker-compose.hub.yaml --profile migration run --rm liquibase
+docker compose --env-file .env.production -f docker-compose.hub.yaml up -d --no-build --wait
+docker compose --env-file .env.production -f docker-compose.hub.yaml ps
+```
+
+Image `e-commerce-migrations` chứa sẵn changelog; migration là bước chạy riêng,
+không tự chạy khi khởi động ứng dụng. Khi cập nhật, đổi `IMAGE_TAG` trong
+`.env.production`, chạy lại `pull`, migration nếu release có thay đổi database,
+rồi `up -d --no-build --wait`. Dùng tag release mới cho mỗi lần publish để có thể
+chọn lại tag cũ khi cần. Rollback image không tự rollback database.
+
+Các workflow CD hiện có push image ứng dụng khi publish GitHub Release; script
+trên cho phép push thủ công và thêm image migration. Workflow `cd-deploy-vps.yml`
+hiện dùng compose local; luồng triển khai VPS bằng Docker Hub này dùng các lệnh ở trên.
 
 ## Tài liệu và triển khai
 
 - [`SETUP.md`](SETUP.md): hướng dẫn thiết lập môi trường Windows/WSL và VS Code.
 - [`docker-compose.yaml`](docker-compose.yaml): hạ tầng dùng khi phát triển local.
 - [`docker-compose.prod.yaml`](docker-compose.prod.yaml): cấu hình Compose cho môi trường production.
+- [`docker-compose.hub.yaml`](docker-compose.hub.yaml): chạy trên VPS bằng image Docker Hub.
+- [`scripts/push-dockerhub.sh`](scripts/push-dockerhub.sh): build/push bộ image cho một release.
 - [`.github/workflows`](.github/workflows): các workflow build, kiểm tra và triển khai dịch vụ.
 - [`docs/openapi`](docs/openapi): tài liệu contract OpenAPI trong repository.
-
-- [`docs/architecture/hardening.md`](docs/architecture/hardening.md): các bảo đảm dữ liệu, giới hạn còn lại và lưu ý chuyển đổi triển khai.

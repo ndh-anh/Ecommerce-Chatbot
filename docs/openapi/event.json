@@ -1,0 +1,884 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Event API",
+    "version": "1.0"
+  },
+  "tags": [
+    {
+      "name": "events"
+    }
+  ],
+  "paths": {
+    "/api/v1/events": {
+      "get": {
+        "operationId": "getEvents",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventQuery"
+          },
+          {
+            "$ref": "#/components/parameters/PageQueryParams.page"
+          },
+          {
+            "$ref": "#/components/parameters/PageQueryParams.pageSize"
+          },
+          {
+            "$ref": "#/components/parameters/PageQueryParams.orderBy"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Access is unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access is forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ]
+      },
+      "post": {
+        "operationId": "postEvent",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "The request has succeeded and a new resource has been created as a result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Access is unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access is forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/events/{eventId}": {
+      "get": {
+        "operationId": "getEventById",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/UUID"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Access is unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access is forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The server cannot find the requested resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ]
+      },
+      "patch": {
+        "operationId": "patchEvent",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/UUID"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Access is unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access is forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The server cannot find the requested resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventPatch"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteEvent",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/UUID"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "There is no content to send for this request, but the headers may be useful. "
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Access is unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access is forbidden.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The server cannot find the requested resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/public/events": {
+      "get": {
+        "operationId": "getPublicEvents",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageQueryParams.page"
+          },
+          {
+            "$ref": "#/components/parameters/PageQueryParams.pageSize"
+          },
+          {
+            "$ref": "#/components/parameters/PageQueryParams.orderBy"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ],
+        "x-public": true
+      }
+    },
+    "/api/v1/public/events/carousel": {
+      "get": {
+        "operationId": "getCarouselEvents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EventSummary"
+                      }
+                    }
+                  },
+                  "required": [
+                    "events"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ],
+        "x-public": true
+      }
+    },
+    "/api/v1/public/events/{slug}": {
+      "get": {
+        "operationId": "getEventBySlug",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/EventSlug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The server cannot find the requested resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "events"
+        ],
+        "x-public": true
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "EventQuery": {
+        "name": "title",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "explode": false
+      },
+      "PageQueryParams.orderBy": {
+        "name": "orderBy",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "explode": false
+      },
+      "PageQueryParams.page": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 1,
+          "default": 1
+        },
+        "explode": false
+      },
+      "PageQueryParams.pageSize": {
+        "name": "pageSize",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        },
+        "explode": false
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "EventDateTime": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "EventImageUrl": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2048,
+        "format": "uri"
+      },
+      "EventInput": {
+        "type": "object",
+        "required": [
+          "title",
+          "slug",
+          "thumbnailUrl",
+          "description",
+          "startsAt",
+          "endsAt"
+        ],
+        "properties": {
+          "title": {
+            "$ref": "#/components/schemas/EventTitle"
+          },
+          "slug": {
+            "$ref": "#/components/schemas/EventSlug"
+          },
+          "thumbnailUrl": {
+            "$ref": "#/components/schemas/EventImageUrl"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 100000
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "startsAt": {
+            "$ref": "#/components/schemas/EventDateTime"
+          },
+          "endsAt": {
+            "$ref": "#/components/schemas/EventDateTime"
+          },
+          "isPublished": {
+            "type": "boolean",
+            "default": false
+          },
+          "showOnCarousel": {
+            "type": "boolean",
+            "default": true
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0,
+            "default": 0
+          }
+        }
+      },
+      "EventList": {
+        "type": "object",
+        "required": [
+          "totalCount",
+          "totalPages",
+          "events"
+        ],
+        "properties": {
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventSummary"
+            }
+          }
+        }
+      },
+      "EventPatch": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "$ref": "#/components/schemas/EventTitle"
+          },
+          "slug": {
+            "$ref": "#/components/schemas/EventSlug"
+          },
+          "thumbnailUrl": {
+            "$ref": "#/components/schemas/EventImageUrl"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 100000
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "startsAt": {
+            "$ref": "#/components/schemas/EventDateTime"
+          },
+          "endsAt": {
+            "$ref": "#/components/schemas/EventDateTime"
+          },
+          "isPublished": {
+            "type": "boolean"
+          },
+          "showOnCarousel": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "EventResponse": {
+        "type": "object",
+        "required": [
+          "eventId",
+          "title",
+          "slug",
+          "thumbnailUrl",
+          "summary",
+          "startsAt",
+          "endsAt",
+          "isPublished",
+          "showOnCarousel",
+          "sortOrder",
+          "status",
+          "description",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "eventId": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "title": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "thumbnailUrl": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "startsAt": {
+            "$ref": "#/components/schemas/EventDateTime"
+          },
+          "endsAt": {
+            "$ref": "#/components/schemas/EventDateTime"
+          },
+          "isPublished": {
+            "type": "boolean"
+          },
+          "showOnCarousel": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "upcoming",
+              "active",
+              "ended"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/EventDateTime"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/EventDateTime"
+          }
+        }
+      },
+      "EventSlug": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200,
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+){0,}$"
+      },
+      "EventSummary": {
+        "type": "object",
+        "required": [
+          "eventId",
+          "title",
+          "slug",
+          "thumbnailUrl",
+          "summary",
+          "startsAt",
+          "endsAt",
+          "isPublished",
+          "showOnCarousel",
+          "sortOrder",
+          "status"
+        ],
+        "properties": {
+          "eventId": {
+            "$ref": "#/components/schemas/UUID"
+          },
+          "title": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "thumbnailUrl": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "startsAt": {
+            "$ref": "#/components/schemas/EventDateTime"
+          },
+          "endsAt": {
+            "$ref": "#/components/schemas/EventDateTime"
+          },
+          "isPublished": {
+            "type": "boolean"
+          },
+          "showOnCarousel": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "upcoming",
+              "active",
+              "ended"
+            ]
+          }
+        }
+      },
+      "EventTitle": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "UUID": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+      }
+    }
+  }
+}

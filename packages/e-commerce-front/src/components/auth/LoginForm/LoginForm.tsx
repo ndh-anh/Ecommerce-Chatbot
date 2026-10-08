@@ -1,5 +1,7 @@
 "use client";
 
+import GoogleLoginButton from "./GoogleLoginButton";
+
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
@@ -22,6 +24,7 @@ import { useMutation } from "@tanstack/react-query";
 export default function LoginForm({
   title = "Đăng nhập",
   mode,
+  googleClientId,
 }: LoginFormProps) {
   const { control, handleSubmit } = useForm<LoginRequest>({
     defaultValues: { username: "", password: "" },
@@ -43,7 +46,9 @@ export default function LoginForm({
         router.push("/");
       } else {
         if (result.code === "USER_UNVERIFIED") {
-          router.push(`/auth/verify-email?email=${encodeURIComponent(data.username)}`);
+          router.push(
+            `/auth/verify-email?email=${encodeURIComponent(data.username)}`,
+          );
         } else {
           throw new Error(result.message || "Đăng nhập thất bại");
         }
@@ -123,14 +128,7 @@ export default function LoginForm({
 
           {mode === "user" && (
             <>
-              <Button
-                fullWidth
-                variant="outlined"
-                sx={{ mt: 2, py: 1.2 }}
-                href="/api/auth/google"
-              >
-                Đăng nhập với Google
-              </Button>
+              <GoogleLoginButton clientId={googleClientId} />
 
               <Box
                 mt={2}
@@ -139,7 +137,12 @@ export default function LoginForm({
                 alignItems="center"
               >
                 <Typography variant="regularS">Chưa có tài khoản?</Typography>
-                <Button sx={{ ml: 1 }} variant="text" component={Link} href="/auth/register">
+                <Button
+                  sx={{ ml: 1 }}
+                  variant="text"
+                  component={Link}
+                  href="/auth/register"
+                >
                   Đăng ký
                 </Button>
               </Box>

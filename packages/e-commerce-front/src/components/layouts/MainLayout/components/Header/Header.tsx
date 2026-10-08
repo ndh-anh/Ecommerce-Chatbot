@@ -20,7 +20,16 @@ const Header = () => {
         alignItems="center"
         className="max-w-7xl mx-auto px-4 md:px-8 h-10"
       >
-        <Stack direction="row" spacing={1}></Stack>
+        <Stack direction="row" spacing={1}>
+          <Button
+            component={NextLink}
+            href="/event"
+            size="small"
+            color="inherit"
+          >
+            Sự kiện
+          </Button>
+        </Stack>
         <Stack direction="row" spacing={1} alignItems="center">
           <NotificationButton />
           <Button

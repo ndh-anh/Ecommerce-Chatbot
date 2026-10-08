@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: auth-google-accounts-v1
+      author: codex
+      changes:
+        - createTable:
+            tableName: google_accounts
+            columns:
+              - column:
+                  name: google_sub
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    unique: true
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: google_accounts
+            baseColumnNames: user_id
+            constraintName: google_accounts_user_id_fkey
+            referencedTableName: users
+            referencedColumnNames: uid
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: google_accounts

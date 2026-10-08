@@ -185,7 +185,7 @@ export const WishlistItemCard = ({
         >
           Mua ngay
         </Button>
-        <Link href={`/product/${product.productId}`} style={{ width: "100%", textDecoration: "none" }}>
+        <Link href={product.slug ? `/product/${product.slug}` : "/product"} style={{ width: "100%", textDecoration: "none" }}>
           <Button variant="outlined" fullWidth size="medium" sx={{ py: 1, borderRadius: 2 }}>
             Xem chi tiết
           </Button>

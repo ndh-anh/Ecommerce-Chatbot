@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { GoogleAuthService } from './google-auth.service';
 import type {
+  PostGoogleLoginBody,
+  PostGoogleLogin200Response,
   GetProfile200Response,
   PostLoginBody,
   PostLogin200Response,
@@ -17,7 +20,17 @@ import { BaseAuthControllerInterface } from '@generated-controller/auth/auth/bas
 
 @Injectable()
 export class AuthController implements BaseAuthControllerInterface {
-  constructor(private readonly service: AuthService) {}
+  constructor(
+    private readonly service: AuthService,
+    private readonly googleAuth: GoogleAuthService,
+  ) {}
+
+  /** POST /auth/google */
+  async postGoogleLogin(
+    body: PostGoogleLoginBody,
+  ): Promise<PostGoogleLogin200Response> {
+    return this.googleAuth.postGoogleLogin(body);
+  }
 
   /**
    * GET /auth/profile

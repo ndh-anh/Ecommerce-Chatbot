@@ -1,0 +1,4 @@
+FROM liquibase/liquibase:4.33
+
+# Package changelogs so migration can run without a source checkout on the VPS.
+COPY --chown=liquibase:liquibase packages/e-commerce-db/changelog/ /liquibase/changelog/

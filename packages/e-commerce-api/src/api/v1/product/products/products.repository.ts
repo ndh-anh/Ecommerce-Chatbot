@@ -28,16 +28,6 @@ export class ProductsRepository {
         await tx.products.delete({
           where: { id: productId },
         });
-
-        await tx.outbox_events.create({
-          data: {
-            id: crypto.randomUUID(),
-            aggregate_type: 'product',
-            aggregate_id: productId,
-            event_type: 'deleted',
-            payload: { productId },
-          },
-        });
       });
     } catch (error) {
       if (
@@ -419,22 +409,6 @@ export class ProductsRepository {
           });
         }
       }
-
-      // 4. Save outbox event
-      const updatedProduct = await tx.products.findUnique({
-        where: { id: productId },
-        include: { categories: true, brands: true, product_images: true },
-      });
-
-      await tx.outbox_events.create({
-        data: {
-          id: crypto.randomUUID(),
-          aggregate_type: 'product',
-          aggregate_id: productId,
-          event_type: 'updated',
-          payload: updatedProduct as any,
-        },
-      });
     });
   }
 
@@ -480,21 +454,6 @@ export class ProductsRepository {
 
         this.logger.log('Save product images success');
       }
-
-      const newProduct = await tx.products.findUnique({
-        where: { id: productId },
-        include: { categories: true, brands: true, product_images: true },
-      });
-
-      await tx.outbox_events.create({
-        data: {
-          id: crypto.randomUUID(),
-          aggregate_type: 'product',
-          aggregate_id: productId,
-          event_type: 'created',
-          payload: newProduct as any,
-        },
-      });
     });
 
     this.logger.log('End save product');

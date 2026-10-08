@@ -59,3 +59,7 @@ model MessageResponse200 {
     @statusCode statusCode: 200;
     @body body: MessageResponse;
 }
+
+model GoogleLoginRequest {
+    idToken: NonEmptyString;
+}

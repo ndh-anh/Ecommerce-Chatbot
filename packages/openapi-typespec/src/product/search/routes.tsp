@@ -12,6 +12,7 @@ namespace Product.Search {
     @route("")
     @operationId("searchProducts")
     @tag("search")
+    @extension("x-public", true)
     op searchProducts(
         ...SearchProductRequestParams,
     ): SearchProductsResponse200 | BadRequestError | InternalServerError;

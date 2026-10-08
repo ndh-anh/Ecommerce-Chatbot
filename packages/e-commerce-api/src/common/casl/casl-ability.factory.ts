@@ -7,6 +7,7 @@ import {
 import { Injectable } from '@nestjs/common';
 
 export type Subjects =
+  | 'Event'
   | 'Product'
   | 'Brand'
   | 'Cart'

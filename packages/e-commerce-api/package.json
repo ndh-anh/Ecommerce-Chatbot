@@ -47,9 +47,11 @@
     "@sendgrid/mail": "^8.1.6",
     "amqplib": "^2.0.1",
     "bcrypt": "^6.0.0",
+    "google-auth-library": "^11.2.0",
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "sanitize-html": "^2.18.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -63,6 +65,7 @@
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.20.1",
+    "@types/sanitize-html": "^2.16.2",
     "@types/supertest": "^7.2.1",
     "dotenv": "^17.4.2",
     "eslint": "^9.39.5",
@@ -90,7 +93,14 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "allowJs": true
+          }
+        }
+      ]
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
@@ -103,6 +113,10 @@
       "^generated/prisma/client$": "<rootDir>/../generated/prisma/client",
       "^generated/prisma/client/(.*)$": "<rootDir>/../generated/prisma/$1",
       "^(\\.{1,2}/.*)\\.js$": "$1"
-    }
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!\\.pnpm/|(?:htmlparser2|domhandler|domutils|domelementtype|dom-serializer|entities)/)",
+      "node_modules/\\.pnpm/(?!(?:htmlparser2|domhandler|domutils|domelementtype|dom-serializer|entities)@)"
+    ]
   }
 }

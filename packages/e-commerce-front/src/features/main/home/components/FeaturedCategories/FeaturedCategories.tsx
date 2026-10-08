@@ -24,7 +24,7 @@ const FeaturedCategories = ({ title = "Danh mục" }: { title?: string }) => {
           <Grid key={c.categoryId} size={{ xs: 6, md: 3 }}>
             <Button
               component={NextLink}
-              href={`/product?category=${c.categoryId}`}
+              href={`/product?categoryIds=${encodeURIComponent(c.categoryId)}`}
               variant="outlined"
               fullWidth
               endIcon={<ArrowForwardIcon fontSize="small" />}

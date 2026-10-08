@@ -11,6 +11,11 @@ export const routes = {
 
   admin: {
     dashboard: "/admin",
+    event: {
+      list: "/admin/event",
+      create: "/admin/event/new",
+      detail: (id: string) => `/admin/event/${id}`,
+    },
 
     category: {
       list: "/admin/category",
@@ -48,6 +53,12 @@ export const routes = {
 } as const;
 
 export const adminMenus: MenuItem[] = [
+  {
+    path: routes.admin.event.list,
+    name: "Sự kiện",
+    icon: "event_rounded",
+    isNavigate: true,
+  },
   {
     path: routes.admin.dashboard,
     name: "Dashboard",

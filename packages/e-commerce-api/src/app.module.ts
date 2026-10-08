@@ -1,3 +1,4 @@
+import { EventsModule } from '@/api/v1/event/events/events.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -72,6 +73,7 @@ import { SearchModule } from '@/api/v1/product/search/search.module';
     OutboxModule,
     AiModule,
     SearchModule,
+    EventsModule,
   ],
   providers: [
     CaslAbilityFactory,

@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: events-v1
+      author: codex
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE events (
+                id uuid PRIMARY KEY,
+                title varchar(200) NOT NULL,
+                slug varchar(200) NOT NULL UNIQUE,
+                thumbnail_url varchar(2048) NOT NULL,
+                description text NOT NULL,
+                summary varchar(500) NOT NULL DEFAULT '',
+                starts_at timestamptz NOT NULL,
+                ends_at timestamptz NOT NULL,
+                is_published boolean NOT NULL DEFAULT false,
+                show_on_carousel boolean NOT NULL DEFAULT true,
+                sort_order integer NOT NULL DEFAULT 0,
+                created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT events_date_range CHECK (ends_at > starts_at),
+                CONSTRAINT events_sort_order CHECK (sort_order >= 0),
+                CONSTRAINT events_slug_format CHECK (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$')
+              );
+              CREATE INDEX idx_events_carousel ON events (is_published, show_on_carousel, starts_at, ends_at);
+              INSERT INTO permissions (pid, code, action, subject)
+              VALUES (gen_random_uuid(), 'event:read', 'read', 'Event'),
+                     (gen_random_uuid(), 'event:create', 'create', 'Event'),
+                     (gen_random_uuid(), 'event:update', 'update', 'Event'),
+                     (gen_random_uuid(), 'event:delete', 'delete', 'Event')
+              ON CONFLICT (code) DO NOTHING;
+              INSERT INTO role_permissions (role_id, permission_id)
+              SELECT r.role_id, p.pid FROM roles r CROSS JOIN permissions p
+              WHERE r.role_name = 'ADMIN' AND p.subject = 'Event'
+              ON CONFLICT (role_id, permission_id) DO NOTHING;
+      rollback:
+        - sql:
+            sql: |
+              DELETE FROM role_permissions WHERE permission_id IN (SELECT pid FROM permissions WHERE subject = 'Event');
+              DELETE FROM permissions WHERE subject = 'Event';
+              DROP TABLE events;

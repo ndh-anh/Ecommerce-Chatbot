@@ -1,240 +1,200 @@
 "use client";
-
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import IconButton from "@mui/material/IconButton";
-import Stack from "@mui/material/Stack";
-import Button from "@mui/material/Button";
+import {
+  Box,
+  Typography,
+  IconButton,
+  Stack,
+  Button,
+  useMediaQuery,
+} from "@mui/material";
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import { useCallback, useEffect, useState } from "react";
+import { useGetCarouselEventsSuspense } from "@e-commerce/api-client/endpoints/event";
+import Image from "next/image";
+import Link from "next/link";
 
-type Slide = {
-  id: string;
-  title: string;
-  subtitle?: string;
-  href?: string;
-  gradient: string;
-};
-
-const DEFAULT_SLIDES: Slide[] = [
-  {
-    id: "s1",
-    title: "Minimalist Essentials",
-    subtitle: "Khám phá bộ sưu tập phong cách tối giản với sự tĩnh lặng tinh tế",
-    href: "/product",
-    gradient: "linear-gradient(135deg, #000000 0%, #171717 100%)", // Solid Black
-  },
-  {
-    id: "s2",
-    title: "Thiết Kế Đột Phá",
-    subtitle: "Sự kết hợp hoàn hảo giữa công nghệ và triết lý thiết kế phẳng",
-    href: "/product",
-    gradient: "linear-gradient(135deg, #27272A 0%, #3F3F46 100%)", // Zinc
-  },
-  {
-    id: "s3",
-    title: "Không Gian Sạch",
-    subtitle: "Trải nghiệm ranh giới mới của nghệ thuật sắp đặt không gian",
-    href: "/product",
-    gradient: "linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%)", // Light Gray
-  },
-];
-
-const ACTIVE_DOT_WIDTH = 26;
-const DOT_SIZE = 10;
-const SLIDE_INTERVAL = 4000;
-
-const SpotlightCarousel = ({
-  slides = DEFAULT_SLIDES,
-  timeout = SLIDE_INTERVAL,
+export default function SpotlightCarousel({
+  timeout = 5000,
 }: {
-  slides?: Slide[];
   timeout?: number;
-}) => {
+}) {
+  const { data } = useGetCarouselEventsSuspense({
+    query: { refetchInterval: 30000, staleTime: 15000 },
+  });
   const [index, setIndex] = useState(0);
-  const active = slides[index];
-
-  const prev = useCallback(
-    () => setIndex((i) => (i - 1 + slides.length) % slides.length),
-    [slides.length],
+  const [paused, setPaused] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const slides = data.events.filter(
+    (event) =>
+      event.isPublished &&
+      event.showOnCarousel &&
+      new Date(event.startsAt).getTime() <= now &&
+      new Date(event.endsAt).getTime() > now,
   );
-
-  const next = useCallback(
-    () => setIndex((i) => (i + 1) % slides.length),
-    [slides.length],
-  );
-
+  const position = slides.length ? index % slides.length : 0;
+  const active = slides[position];
+  const next = useCallback(() => {
+    if (slides.length) setIndex((value) => (value + 1) % slides.length);
+  }, [slides.length]);
   useEffect(() => {
-    if (!timeout) return;
-    const id = setInterval(next, timeout);
-    return () => clearInterval(id);
-  }, [next, timeout]);
-
+    if (!timeout || slides.length < 2 || paused || reducedMotion) return;
+    const timer = setInterval(next, timeout);
+    return () => clearInterval(timer);
+  }, [next, timeout, slides.length, paused, reducedMotion]);
+  useEffect(() => {
+    const expiry = Math.min(
+      ...data.events
+        .flatMap((event) => [
+          new Date(event.startsAt).getTime(),
+          new Date(event.endsAt).getTime(),
+        ])
+        .filter((value) => value > now),
+    );
+    if (!Number.isFinite(expiry)) return;
+    const timer = setTimeout(
+      () => setNow(Date.now()),
+      Math.min(Math.max(expiry - Date.now() + 1, 1), 2147483647),
+    );
+    return () => clearTimeout(timer);
+  }, [data, now]);
+  // Refresh the local clock when polling brings in newly started events.
+  useEffect(() => {
+    setNow(Date.now());
+  }, [data]);
+  if (!active) return null;
   return (
     <Box
       component="section"
-      sx={{ width: "100%", px: 0, pt: 0 }}
+      aria-label="Sự kiện nổi bật"
+      aria-roledescription="carousel"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node))
+          setPaused(false);
+      }}
     >
-      <Box sx={{ position: "relative" }}>
+      <Box
+        sx={{
+          position: "relative",
+          minHeight: { xs: 320, md: 440 },
+          overflow: "hidden",
+          bgcolor: "grey.900",
+        }}
+      >
+        <Image
+          src={active.thumbnailUrl}
+          alt={active.title}
+          fill
+          unoptimized
+          priority={position === 0}
+          sizes="100vw"
+          style={{ objectFit: "cover" }}
+        />
         <Box
           sx={{
-            minHeight: { xs: 300, md: 400 },
-            borderRadius: 0,
-            overflow: "hidden",
-            display: "flex",
-            alignItems: "stretch",
-            background: active.gradient,
-            transition: "background 0.5s ease-in-out",
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(90deg, rgba(0,0,0,.78), rgba(0,0,0,.18))",
+          }}
+        />
+        <Stack
+          spacing={3}
+          justifyContent="center"
+          sx={{
             position: "relative",
+            minHeight: { xs: 320, md: 440 },
+            px: { xs: 6, md: 10 },
+            py: 5,
+            color: "white",
+            maxWidth: 850,
           }}
         >
-          {/* Glowing Ambient Spheres */}
-          <Box
-            sx={{
-              position: "absolute",
-              width: 320,
-              height: 320,
-              borderRadius: "50%",
-              background: "rgba(255, 255, 255, 0.15)",
-              filter: "blur(60px)",
-              top: -80,
-              right: -80,
-              pointerEvents: "none",
-            }}
-          />
-          <Box
-            sx={{
-              position: "absolute",
-              width: 240,
-              height: 240,
-              borderRadius: "50%",
-              background: "rgba(255, 255, 255, 0.1)",
-              filter: "blur(50px)",
-              bottom: -40,
-              right: 120,
-              pointerEvents: "none",
-            }}
-          />
-
-          <Stack
-            spacing={3}
-            alignItems="center"
-            justifyContent="center"
-            sx={{
-              width: "100%",
-              height: "100%",
-              zIndex: 2,
-              p: { xs: 4, md: 6 },
-              textAlign: "center",
-            }}
+          <Typography
+            component="h2"
+            variant="title"
+            sx={{ fontSize: { xs: "1.8rem", md: "3rem" }, fontWeight: 700 }}
           >
+            {active.title}
+          </Typography>
+          {active.summary && (
             <Typography
-              variant="title"
+              sx={{ fontSize: { xs: "1rem", md: "1.2rem" }, maxWidth: 600 }}
+            >
+              {active.summary}
+            </Typography>
+          )}
+          <Button
+            component={Link}
+            href={`/event/${active.slug}`}
+            variant="contained"
+            sx={{ alignSelf: "flex-start", px: 4, py: 1.5 }}
+          >
+            Xem sự kiện
+          </Button>
+        </Stack>
+        {slides.length > 1 && (
+          <>
+            <IconButton
+              aria-label="Sự kiện trước"
+              onClick={() =>
+                setIndex((value) => (value - 1 + slides.length) % slides.length)
+              }
               sx={{
-                maxWidth: 800,
-                color: active.id === "s3" ? "#000" : "common.white",
-                fontSize: { xs: "2rem", md: "3rem" },
-                fontWeight: 800,
-                letterSpacing: "-0.04em",
-                lineHeight: 1.1,
+                position: "absolute",
+                left: 8,
+                top: "50%",
+                color: "white",
+                bgcolor: "rgba(0,0,0,.25)",
               }}
             >
-              {active.title}
-            </Typography>
-            <Typography
-              variant="regularL"
+              <ArrowBackIosNewIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              aria-label="Sự kiện tiếp theo"
+              onClick={next}
               sx={{
-                maxWidth: 500,
-                color: active.id === "s3" ? "#4B5563" : "rgba(255,255,255,0.7)",
-                fontSize: { xs: "1rem", md: "1.2rem" },
-                fontWeight: 500,
+                position: "absolute",
+                right: 8,
+                top: "50%",
+                color: "white",
+                bgcolor: "rgba(0,0,0,.25)",
               }}
             >
-              {active.subtitle}
-            </Typography>
-            {active.href && (
-              <Button
-                href={active.href}
-                variant="contained"
-                sx={{
-                  bgcolor: active.id === "s3" ? "#000" : "common.white",
-                  color: active.id === "s3" ? "#fff" : "#000",
-                  borderRadius: "99px",
-                  px: 5,
-                  py: 1.5,
-                  fontWeight: 600,
-                  fontSize: "1rem",
-                  boxShadow: "none",
-                  "&:hover": {
-                    bgcolor: active.id === "s3" ? "#333" : "rgba(255,255,255,0.8)",
-                    transform: "scale(1.02)",
-                  },
-                  transition: "all 0.2s ease",
-                }}
-              >
-                Mua ngay
-              </Button>
-            )}
-          </Stack>
-        </Box>
-
-        <IconButton
-          aria-label="Previous"
-          onClick={prev}
-          sx={{
-            color: "rgba(255,255,255,0.8)",
-            position: "absolute",
-            left: 12,
-            top: "50%",
-            transform: "translateY(-50%)",
-            bgcolor: "rgba(0,0,0,0.15)",
-            "&:hover": { bgcolor: "rgba(0,0,0,0.3)" },
-            zIndex: 3,
-          }}
-        >
-          <ArrowBackIosNewIcon fontSize="small" />
-        </IconButton>
-
-        <IconButton
-          aria-label="Next"
-          onClick={next}
-          sx={{
-            color: "rgba(255,255,255,0.8)",
-            position: "absolute",
-            right: 12,
-            top: "50%",
-            transform: "translateY(-50%)",
-            bgcolor: "rgba(0,0,0,0.15)",
-            "&:hover": { bgcolor: "rgba(0,0,0,0.3)" },
-            zIndex: 3,
-          }}
-        >
-          <ArrowForwardIosIcon fontSize="small" />
-        </IconButton>
+              <ArrowForwardIosIcon fontSize="small" />
+            </IconButton>
+          </>
+        )}
       </Box>
-
-      <Stack direction="row" spacing={1} justifyContent="center" sx={{ mt: 2 }}>
-        {slides.map((s, i) => (
-          <Box
-            key={s.id}
-            onClick={() => setIndex(i)}
-            sx={(theme) => ({
-              width: i === index ? ACTIVE_DOT_WIDTH : DOT_SIZE,
-              height: DOT_SIZE,
-              borderRadius: 99,
-              bgcolor:
-                i === index
-                  ? theme.palette.primary.main
-                  : theme.palette.action.disabledBackground,
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-            })}
-          />
-        ))}
-      </Stack>
+      {slides.length > 1 && (
+        <Stack direction="row" justifyContent="center" spacing={1} mt={1}>
+          {slides.map((event, slideIndex) => (
+            <IconButton
+              key={event.eventId}
+              aria-label={`Hiển thị sự kiện ${slideIndex + 1}: ${event.title}`}
+              aria-current={slideIndex === position ? "true" : undefined}
+              onClick={() => setIndex(slideIndex)}
+              size="small"
+            >
+              <Box
+                sx={{
+                  width: slideIndex === position ? 26 : 10,
+                  height: 10,
+                  borderRadius: 99,
+                  bgcolor:
+                    slideIndex === position
+                      ? "primary.main"
+                      : "action.disabledBackground",
+                }}
+              />
+            </IconButton>
+          ))}
+        </Stack>
+      )}
     </Box>
   );
-};
-
-export default SpotlightCarousel;
+}
