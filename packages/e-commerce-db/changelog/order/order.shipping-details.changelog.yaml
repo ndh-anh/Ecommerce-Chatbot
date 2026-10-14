@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - changeSet:
+      id: order-004-recipient-and-payment-details
+      author: codex
+      changes:
+        - addColumn:
+            tableName: orders
+            columns:
+              - column:
+                  name: shipping_address
+                  type: text
+                  remarks: Recipient name, delivery address and contact phone from checkout.
+              - column:
+                  name: payment_method
+                  type: varchar(50)
+      rollback:
+        - dropColumn:
+            tableName: orders
+            columnName: payment_method
+        - dropColumn:
+            tableName: orders
+            columnName: shipping_address

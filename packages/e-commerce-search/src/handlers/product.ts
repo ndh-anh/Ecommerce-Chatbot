@@ -4,6 +4,7 @@ import {
 } from "../buf/generated/product/v1/product";
 import { esClient } from "../config/elasticsearch";
 import { getEmbedding } from "../config/model";
+import { keywordFields } from "./keywords";
 
 /** Generate an embedding and index a published product with its external event version. */
 export async function updateProduct(
@@ -24,6 +25,11 @@ export async function updateProduct(
       version_type: "external" as const,
     }),
     document: {
+      ...keywordFields({
+        productName: product.productName,
+        categoryName: product.categoryName,
+        brandName: product.brandName,
+      }),
       deleted: false,
       eventId,
       productId: product.productId,

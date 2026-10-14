@@ -1,14 +1,35 @@
 from langchain_core.messages import HumanMessage
 from copy import deepcopy
+from threading import Lock
 from app.utils.tool_results import tool_payload
+from app.utils.request_budget import check_request_active
+
+
+class ChatBusyError(Exception):
+    """A previous turn for this checkpoint is still running."""
 
 
 class ChatService:
     def __init__(self, agent):
         self.agent = agent
+        self._active_sessions = set()
+        self._session_guard = Lock()
 
     def process_query(self, message: str, session_id: str = "default_session", user_id: str = "default_user", confirm: bool = None) -> dict:
-        config = {"configurable": {"thread_id": session_id, "user_id": user_id}}
+        # gRPC has several worker threads; never run two turns on the same checkpoint.
+        with self._session_guard:
+            if session_id in self._active_sessions:
+                raise ChatBusyError("A previous chat turn is still running")
+            self._active_sessions.add(session_id)
+        try:
+            return self._process_query(message, session_id, user_id, confirm)
+        finally:
+            with self._session_guard:
+                self._active_sessions.remove(session_id)
+
+    def _process_query(self, message: str, session_id: str, user_id: str, confirm: bool) -> dict:
+        check_request_active()
+        config = {"configurable": {"thread_id": session_id, "user_id": user_id}, "recursion_limit": 16}
         
         state = self.agent.get_state(config)
         is_suspended = state.next and "sensitive_order_tools" in state.next
@@ -39,7 +60,7 @@ class ChatService:
                 # Just return CONFIRMATION_REQUIRED again
                 return {
                     "message": "Vui lòng xác nhận thực hiện hành động này.",
-                    "data": None,
+                    "data": {"confirmation": True, "actions": state.values.get("pending_actions", [])},
                     "type": "CONFIRMATION_REQUIRED"
                 }
         else:
@@ -61,7 +82,7 @@ class ChatService:
                     if call["name"] in ("place_order_tool", "cancel_order_tool")
                 ]
                 if pending:
-                    snapshot_data = pending[0]["args"]
+                    snapshot_data = {"confirmation": True, "actions": pending}
                     data_type = pending[0]["name"]
                     
             return {
@@ -90,7 +111,7 @@ class ChatService:
             # Re-fetch messages since we updated state
             messages = self.agent.get_state(config).values.get("messages", [])
         else:
-            final_message = messages[-1].content
+            final_message = messages[-1].content if messages else "Trợ lý chưa có câu trả lời. Vui lòng thử lại."
         data = None
         data_type = None
         
@@ -106,44 +127,14 @@ class ChatService:
             for i in range(len(messages) - 1, last_human_idx, -1):
                 if messages[i].type == "tool" and messages[i].name != "get_product_details":
                     data_type = messages[i].name
-                    import json
                     try:
                         data = deepcopy(tool_payload(messages[i]))
-                        if data_type == "get_products" and isinstance(data, dict) and "data" in data and isinstance(data["data"], list) and len(data["data"]) > 0:
-                            from app.utils.llm_utils import get_llm_with_fallbacks
-                            from app.config import settings
-                            import re
-                            
-                            filter_llm = get_llm_with_fallbacks(
-                                api_key=settings.DASHSCOPE_API_KEY_AGENT_1,
-                                temperature=0
-                            )
-                            user_msg = messages[last_human_idx].content
-                            ai_msg = messages[-1].content if messages[-1].type == "ai" else ""
-                            prompt = f"""Khách hàng yêu cầu: "{user_msg}"
-AI phản hồi: "{ai_msg}"
-
-Dưới đây là danh sách các sản phẩm thô từ CSDL:
-{json.dumps([{ 'id': p['productId'], 'name': p['productName'] } for p in data["data"]], ensure_ascii=False)}
-
-Dựa vào yêu cầu của khách và câu trả lời của AI, hãy chọn ra các 'id' sản phẩm THỰC SỰ LÀ CÂU TRẢ LỜI ĐÚNG và BỎ QUA các sản phẩm không liên quan (ví dụ tìm "sách về nhà" thì bỏ qua "sách nhân gian đáng giá").
-Trả về ĐÚNG 1 mảng JSON chứa các ID hợp lệ, ví dụ: ["id1", "id2"]. KHÔNG xuất thêm bất kỳ văn bản nào khác. Nếu không có cái nào phù hợp, trả về []."""
-                            try:
-                                filter_resp = filter_llm.invoke(prompt).content.strip()
-                                match = re.search(r'\[.*\]', filter_resp, re.DOTALL)
-                                if match:
-                                    valid_ids = json.loads(match.group(0))
-                                    if isinstance(valid_ids, list):
-                                        filtered = [p for p in data["data"] if p["productId"] in valid_ids]
-                                        if len(filtered) > 0:
-                                            data["data"] = filtered
-                                        else:
-                                            data = None
-                            except Exception:
-                                pass
                     except Exception:
                         data = messages[i].content
                     break
+
+        if data_type == "request_customer_info" and isinstance(data, dict):
+            final_message = data.get("message", "Vui lòng điền thông tin người nhận.")
 
         return {
             "message": final_message,
@@ -152,7 +143,8 @@ Trả về ĐÚNG 1 mảng JSON chứa các ID hợp lệ, ví dụ: ["id1", "id
         }
 
     def get_chat_history(self, session_id: str, user_id: str) -> list:
-        config = {"configurable": {"thread_id": session_id, "user_id": user_id}}
+        config = {"configurable": {"thread_id": session_id, "user_id": user_id}, "recursion_limit": 16}
+        state_snapshot = None
         try:
             state_snapshot = self.agent.get_state(config)
             messages = state_snapshot.values.get("messages", [])
@@ -185,9 +177,9 @@ Trả về ĐÚNG 1 mảng JSON chứa các ID hợp lệ, ví dụ: ["id1", "id
                                 if isinstance(parsed, dict) and "data" in parsed:
                                     data_payload = json.dumps(parsed)
                                 else:
-                                    data_payload = parsed if isinstance(parsed, str) else json.dumps(parsed)
+                                    data_payload = json.dumps(parsed, ensure_ascii=False)
                             except Exception:
-                                data_payload = prev_msg.content
+                                data_payload = json.dumps(prev_msg.content, ensure_ascii=False)
                             break
                             
                     history.append({
@@ -196,4 +188,19 @@ Trả về ĐÚNG 1 mảng JSON chứa các ID hợp lệ, ví dụ: ["id1", "id
                         "text": msg.content,
                         "data": data_payload
                     })
+        if state_snapshot and state_snapshot.next and "sensitive_order_tools" in state_snapshot.next:
+            pending = state_snapshot.values.get("pending_actions") or []
+            if not pending and messages:
+                pending = [
+                    {"name": call["name"], "args": call["args"]}
+                    for call in getattr(messages[-1], "tool_calls", [])
+                    if call["name"] in ("place_order_tool", "cancel_order_tool")
+                ]
+            if pending:
+                history.append({
+                    "id": "pending_confirmation",
+                    "sender": "ai",
+                    "text": "Vui lòng kiểm tra thông tin và xác nhận hành động bên dưới.",
+                    "data": json.dumps({"confirmation": True, "actions": pending}, ensure_ascii=False),
+                })
         return history

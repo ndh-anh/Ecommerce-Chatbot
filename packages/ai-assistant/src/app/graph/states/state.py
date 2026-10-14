@@ -48,5 +48,5 @@ class AgentState(TypedDict, total=False):
     inventory_results: Optional[list[dict[str, Any]]]
     order_draft: Optional[OrderDraft]
     pending_actions: list[PendingAction]
-    action_status: Optional[Literal["awaiting_confirmation", "confirmed", "rejected", "executed"]]
+    action_status: Optional[Literal["awaiting_confirmation", "confirmed", "rejected", "executed", "failed"]]
     last_order_result: Any

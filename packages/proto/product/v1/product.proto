@@ -5,6 +5,16 @@ package products;
 
 service ProductService {
   rpc SearchProduct (SearchProductRequest) returns (ProductResponse);
+  rpc SuggestSearchKeywords (SuggestSearchKeywordsRequest) returns (SearchKeywordSuggestionsResponse);
+}
+
+message SuggestSearchKeywordsRequest {
+  string keyword = 1;
+  int32 limit = 2;
+}
+
+message SearchKeywordSuggestionsResponse {
+  repeated string suggestions = 1;
 }
 
 message SearchProductRequest {

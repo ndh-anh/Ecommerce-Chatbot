@@ -13,9 +13,14 @@ import {
 interface ChatVariantCardProps {
   variant: any;
   onOrder: (sku: string) => void;
+  disabled?: boolean;
 }
 
-const ChatVariantCard: React.FC<ChatVariantCardProps> = ({ variant, onOrder }) => {
+const ChatVariantCard: React.FC<ChatVariantCardProps> = ({
+  variant,
+  onOrder,
+  disabled,
+}) => {
   return (
     <Card
       sx={{
@@ -54,7 +59,7 @@ const ChatVariantCard: React.FC<ChatVariantCardProps> = ({ variant, onOrder }) =
               typography: "regularXs",
             }}
           >
-            No Image
+            Chưa có ảnh
           </Box>
         )}
       </Box>
@@ -73,11 +78,19 @@ const ChatVariantCard: React.FC<ChatVariantCardProps> = ({ variant, onOrder }) =
         >
           SKU: {variant.sku}
         </Typography>
-        
+        {variant.variant_name && (
+          <Typography variant="regularS">{variant.variant_name}</Typography>
+        )}
+
         {variant.variantAttributes && variant.variantAttributes.length > 0 && (
-          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
+          <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mb: 1 }}>
             {variant.variantAttributes.map((attr: any, i: number) => (
-              <Chip key={i} size="small" label={`${attr.attributeName}: ${attr.attributeValue}`} sx={{ fontSize: '0.7rem' }} />
+              <Chip
+                key={i}
+                size="small"
+                label={`${attr.attributeName}: ${attr.attributeValue}`}
+                sx={{ fontSize: "0.7rem" }}
+              />
             ))}
           </Box>
         )}
@@ -96,6 +109,7 @@ const ChatVariantCard: React.FC<ChatVariantCardProps> = ({ variant, onOrder }) =
       </CardContent>
       <CardActions sx={{ p: 1.5, pt: 1, gap: 1 }}>
         <Button
+          disabled={disabled || (variant.stock ?? 0) <= 0}
           onClick={() => onOrder(variant.sku)}
           variant="contained"
           size="small"
@@ -107,7 +121,7 @@ const ChatVariantCard: React.FC<ChatVariantCardProps> = ({ variant, onOrder }) =
             textTransform: "none",
           }}
         >
-          Đặt mua variant này
+          Chọn phân loại này
         </Button>
       </CardActions>
     </Card>

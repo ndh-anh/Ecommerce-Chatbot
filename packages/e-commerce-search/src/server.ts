@@ -6,8 +6,14 @@ import {
   ProductServiceServer,
   ProductServiceService,
   SearchProductRequest,
+  SuggestSearchKeywordsRequest,
+  SearchKeywordSuggestionsResponse,
 } from "./buf/generated/product/v1/product";
 import { searchProducts } from "./handlers/product";
+import {
+  ensureKeywordMapping,
+  suggestSearchKeywords,
+} from "./handlers/keywords";
 import { esClient } from "./config/elasticsearch"; // Import esClient của bạn
 import { initRabbitMQConsumer, stopRabbitMQConsumer } from "./rabbitmq";
 
@@ -64,11 +70,40 @@ async function initElasticsearch(): Promise<void> {
     index: "products",
     properties: { deleted: { type: "boolean" }, eventId: { type: "keyword" } },
   });
+  await ensureKeywordMapping();
   console.log("Elasticsearch is ready.");
 }
 
 // 2. Định nghĩa gRPC server implementation
 const serverImpl: ProductServiceServer = {
+  suggestSearchKeywords: async (
+    call: grpc.ServerUnaryCall<
+      SuggestSearchKeywordsRequest,
+      SearchKeywordSuggestionsResponse
+    >,
+    callback: grpc.sendUnaryData<SearchKeywordSuggestionsResponse>,
+  ) => {
+    const keyword = call.request.keyword.trim();
+    const limit = call.request.limit || 6;
+    if (keyword.length < 2 || keyword.length > 100 || limit < 1 || limit > 10) {
+      callback({
+        code: grpc.status.INVALID_ARGUMENT,
+        message: "Invalid keyword or suggestion limit",
+      });
+      return;
+    }
+    try {
+      callback(null, {
+        suggestions: await suggestSearchKeywords(keyword, limit),
+      });
+    } catch (error) {
+      console.error("Keyword completion failed", error);
+      callback({
+        code: grpc.status.UNAVAILABLE,
+        message: "Keyword suggestions are temporarily unavailable",
+      });
+    }
+  },
   searchProduct: async (
     call: grpc.ServerUnaryCall<SearchProductRequest, ProductResponse>,
     callback: grpc.sendUnaryData<ProductResponse>,

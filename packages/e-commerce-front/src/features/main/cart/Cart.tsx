@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { getCart } from "@e-commerce/api-client/endpoints/cart";
+import { useCart } from "@/hooks/useCart";
 import Container from "@mui/material/Container";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
@@ -16,28 +15,9 @@ import { useUser } from "@/providers/UserProvider/UserProvider";
 
 const Cart = () => {
   const { userId, isInitialized } = useUser();
-  const [loading, setLoading] = useState(true);
-  const [cart, setCart] = useState<any>(null);
+  const { data: cart, isLoading, isError, refetch } = useCart(isInitialized ? userId : null);
 
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    if (!userId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    getCart({ userId })
-      .then((data) => setCart(data))
-      .catch((err) => {
-        console.log("Cart empty or not found:", err);
-      })
-      .finally(() => setLoading(false));
-  }, [userId, isInitialized]);
-
-  if (loading) {
+  if (!isInitialized || isLoading) {
     return (
       <Container maxWidth="lg" sx={{ py: 8 }}>
         <Stack alignItems="center" justifyContent="center" height="50vh">
@@ -74,6 +54,17 @@ const Cart = () => {
             <Button variant="contained">Đăng nhập ngay</Button>
           </Link>
         </Paper>
+      </Container>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Container maxWidth="md" sx={{ py: 8 }}>
+        <Stack spacing={2} alignItems="center">
+          <Typography>Không thể tải giỏ hàng. Vui lòng thử lại.</Typography>
+          <Button onClick={() => void refetch()}>Thử lại</Button>
+        </Stack>
       </Container>
     );
   }

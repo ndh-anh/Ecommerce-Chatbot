@@ -1,0 +1,17 @@
+# One-off migrations for the source-based production deployment.
+# docker compose --env-file .env.production -f docker-compose.prod.yaml -f docker-compose.migrations.yaml run --rm liquibase
+services:
+  liquibase:
+    image: liquibase/liquibase:4.33
+    profiles: ["migration"]
+    environment:
+      LIQUIBASE_COMMAND_URL: ${LIQUIBASE_URL:-jdbc:postgresql://${DB_HOST}:${DB_PORT:-5432}/${DB_NAME:-postgres}?sslmode=require}
+      LIQUIBASE_COMMAND_USERNAME: ${DB_USERNAME}
+      LIQUIBASE_COMMAND_PASSWORD: ${DB_PASSWORD}
+      LIQUIBASE_COMMAND_CHANGELOG_FILE: db.changelog-master.yaml
+      LIQUIBASE_SEARCH_PATH: /liquibase/changelog
+    volumes:
+      - ./packages/e-commerce-db/changelog:/liquibase/changelog:ro
+    command: ["update", "-DadminPassword=${ADMIN_PASSWORD:-}"]
+    networks:
+      - e-commerce-network-prod

@@ -1,7 +1,14 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import type {
   SearchProductsQueryParams,
   SearchProducts200Response,
+  SuggestSearchKeywordsQueryParams,
+  SuggestSearchKeywords200Response,
 } from '@e-commerce/api-validation/types/product';
 import type { BaseSearchControllerInterface } from '@generated-controller/product/search/base-search.controller.interface';
 import * as grpc from '@grpc/grpc-js';
@@ -18,6 +25,33 @@ export class SearchService implements BaseSearchControllerInterface {
       process.env.SEARCH_SERVICE_URL || 'localhost:50053',
       grpc.credentials.createInsecure(),
     );
+  }
+
+  /** Return ES completion phrases without invoking semantic search or the database. */
+  async suggestSearchKeywords(
+    query: SuggestSearchKeywordsQueryParams,
+  ): Promise<SuggestSearchKeywords200Response> {
+    const keyword = query.keyword.trim();
+    if (keyword.length < 2)
+      throw new BadRequestException('Nhập ít nhất 2 ký tự để nhận gợi ý.');
+    return new Promise((resolve, reject) => {
+      this.client.suggestSearchKeywords(
+        { keyword, limit: query.limit ?? 6 },
+        new grpc.Metadata(),
+        { deadline: Date.now() + 5_000 },
+        (error, response) => {
+          if (error) {
+            reject(
+              new ServiceUnavailableException(
+                'Gợi ý tìm kiếm hiện chưa khả dụng.',
+              ),
+            );
+            return;
+          }
+          resolve({ suggestions: response.suggestions });
+        },
+      );
+    });
   }
 
   async searchProducts(

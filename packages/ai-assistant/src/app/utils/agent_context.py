@@ -21,7 +21,7 @@ def agent_context(state: AgentState, role: str) -> list:
     if role in ("product", "order") and state.get("inspected_product"):
         facts["inspected_product"] = product_summary(state["inspected_product"])
     if role == "order":
-        for key in ("order_draft", "action_status"):
+        for key in ("order_draft", "action_status", "last_order_result"):
             if state.get(key) is not None:
                 facts[key] = state[key]
     if facts:

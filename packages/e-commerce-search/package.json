@@ -6,7 +6,7 @@
     "proto:generate": "pnpm --filter proto generate",
     "build": "tsc",
     "server": "tsx --env-file=.env src/server.ts",
-    "test": "node --require tsx/cjs test/outbox.test.cjs"
+    "test": "node --require tsx/cjs test/outbox.test.cjs && node --require tsx/cjs test/keywords.test.cjs"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.14.1",

@@ -131,4 +131,5 @@ export const getPermissions: Record<Operation, PolicyRule[]> = {
   postAiChat: [],
   getAiChatHistory: [],
   searchProducts: [],
+  suggestSearchKeywords: [],
 };

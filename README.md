@@ -221,11 +221,49 @@ website; `NEXT_PUBLIC_API_URL` là URL API công khai được nhúng lúc build
 Các khóa `DASHSCOPE_API_KEY`, `DASHSCOPE_API_KEY_AGENT_1` và
 `DASHSCOPE_API_KEY_AGENT_2` phục vụ search và các agent chatbot.
 
+Khi cập nhật tính năng chat đặt hàng, chạy migration trước để thêm
+`orders.shipping_address` và `orders.payment_method` (đơn cũ giữ giá trị null),
+rồi rebuild các service sử dụng code mới:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yaml -f docker-compose.migrations.yaml run --rm liquibase
+docker compose --env-file .env.production -f docker-compose.prod.yaml up -d --build order ai-assistant api frontend
+```
+
+Chat mở form tên người nhận, số điện thoại Việt Nam, địa chỉ và phương thức
+thanh toán sau khi khách chọn phân loại/số lượng. Gửi form chưa tạo đơn;
+khách phải kiểm tra và xác nhận riêng. Thông tin cũng được kiểm tra trước khi
+gửi đến Order Service và được lưu cùng đơn hàng.
+Model có timeout 20 giây mỗi lần gọi, không tự retry và dùng một model dự phòng.
+API chat có deadline 90 giây. Khi chưa nhận được kết quả sau khi xác nhận,
+tải lại lịch sử chat và kiểm tra đơn hàng trước khi gửi lại.
+
 Compose đặt `ELASTICSEARCH_NODE=http://elasticsearch:9200` cho Search Service và
 chờ ES healthy trước khi khởi động search. Elasticsearch production tắt authentication,
 chỉ mở cổng trong mạng Docker; các cổng gRPC cũng chỉ dùng trong mạng Docker.
 Mặc định frontend mở cổng `80` (map vào cổng `3000` trong container), API mở cổng `8080`; cấu hình domain HTTPS qua
 reverse proxy của máy triển khai.
+
+Thanh tìm kiếm gợi ý **từ khóa** qua API public
+`GET /api/v1/search/suggestions?keyword=ao&limit=6`. Search Service dùng ES
+`completion` từ tên sản phẩm, danh mục và thương hiệu của các sản phẩm đã xuất bản.
+Gõ không dấu vẫn nhận nhãn tiếng Việt có dấu; chọn gợi ý mở trang tìm kiếm theo
+từ khóa đó. Gợi ý không tạo embedding hoặc gọi model AI.
+
+Sau khi cập nhật phiên bản có autocomplete, rebuild các service rồi bổ sung
+gợi ý cho sản phẩm đã có trong ES:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yaml up -d --build search api frontend
+docker compose --env-file .env.production -f docker-compose.prod.yaml exec -T search node dist/scripts/backfill-keywords.js
+```
+
+Search Service tự bổ sung mapping khi khởi động. Script backfill giữ nguyên
+vector và external version, bỏ qua dữ liệu đã xử lý và tránh ghi đè event mới
+đang đồng bộ. Sản phẩm mới/cập nhật sẽ tự có gợi ý qua outbox; sản phẩm ẩn/xóa
+được thay bằng tombstone nên không còn gợi ý sau khi ES refresh.
+Với Docker Hub, publish/pull image mới và dùng `docker-compose.hub.yaml` trong
+các lệnh trên (không dùng `--build`).
 
 ### Build/push Docker Hub và chạy trên VPS
 

@@ -13,11 +13,13 @@ import Link from "next/link";
 interface ChatProductCardProps {
   product: any;
   onOrder: (productName: string) => void;
+  disabled?: boolean;
 }
 
 const ChatProductCard: React.FC<ChatProductCardProps> = ({
   product,
   onOrder,
+  disabled,
 }) => {
   return (
     <Card
@@ -87,6 +89,7 @@ const ChatProductCard: React.FC<ChatProductCardProps> = ({
       </CardContent>
       <CardActions sx={{ p: 1.5, pt: 0, gap: 1 }}>
         <Button
+          disabled={disabled}
           component={Link}
           href={`/product/${product.slug}`}
           variant="contained"

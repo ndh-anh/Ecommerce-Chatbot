@@ -1,4 +1,5 @@
 from langchain_core.tools import tool
+from app.utils.request_budget import rpc_timeout
 from app.clients.order_client import order_client_manager
 from app.buf.generated.order.v1 import order_pb2
 
@@ -16,7 +17,7 @@ def cancel_order_tool(order_id: str, reason: str = "User requested cancellation"
     client = order_client_manager.get_client()
     try:
         request = order_pb2.CancelOrderRequest(order_id=order_id, reason=reason)
-        response = client.CancelOrder(request)
+        response = client.CancelOrder(request, timeout=rpc_timeout())
         return json.dumps({
             "order_id": order_id,
             "success": response.success,

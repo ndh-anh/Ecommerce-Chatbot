@@ -52,6 +52,7 @@ test("indexes minimum variant price with external version and visible marker", a
   await applyProductEvent(base);
   assert.equal(writes[0].document.price, 10);
   assert.equal(writes[0].document.deleted, false);
+  assert.ok(writes[0].document.keyword_suggest.input.includes("product"));
   assert.equal(writes[0].version_type, "external");
   assert.equal(writes[0].version, base.eventVersion);
 });
@@ -77,6 +78,7 @@ test("deletion and unpublishing retain permanent versioned tombstones", async ()
     assert.equal(write.document.deleted, true);
     assert.equal(write.version, base.eventVersion);
     assert.equal(write.document.productName, undefined);
+    assert.equal(write.document.keyword_suggest, undefined);
   }
 });
 test("racing stale writes ignore only Elasticsearch version conflicts", async () => {

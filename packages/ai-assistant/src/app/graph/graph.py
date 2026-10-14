@@ -15,6 +15,7 @@ from app.tools.check_order_tool import check_order_tool
 from app.tools.cancel_order_tool import cancel_order_tool
 from app.tools.check_inventory_tool import check_inventory_tool
 from app.tools.get_policy import get_policy
+from app.tools.request_customer_info import request_customer_info
 
 def route_order_tools(state: AgentState):
     messages = state.get("messages", [])
@@ -27,6 +28,18 @@ def route_order_tools(state: AgentState):
             return "sensitive_order_tools"
         return "safe_order_tools"
     return "supervisor"
+
+
+def route_safe_order_tools(state: AgentState):
+    if state.get("messages") and state["messages"][-1].additional_kwargs.get("customer_form"):
+        return "__end__"
+    # Inspect only the contiguous tool results from the current execution batch.
+    for message in reversed(state.get("messages", [])):
+        if message.type != "tool":
+            break
+        if message.name == "request_customer_info":
+            return "__end__"
+    return "order"
 
 def create_agent_graph():
     builder = StateGraph(AgentState)
@@ -41,7 +54,7 @@ def create_agent_graph():
     builder.add_node("product_tools", create_tool_node([get_products, get_product_details, check_inventory_tool]))
     
     # Tách order_tools thành 2 nhánh: an toàn và nhạy cảm
-    builder.add_node("safe_order_tools", create_tool_node([check_inventory_tool, check_order_tool]))
+    builder.add_node("safe_order_tools", create_tool_node([check_inventory_tool, check_order_tool, request_customer_info]))
     builder.add_node("sensitive_order_tools", create_tool_node([place_order_tool, cancel_order_tool]))
     
     builder.add_node("support_tools", create_tool_node([get_policy]))
@@ -88,7 +101,9 @@ def create_agent_graph():
             "supervisor": "supervisor"
         }
     )
-    builder.add_edge("safe_order_tools", "order")
+    # A form is a waiting point: return it immediately without another model call.
+    builder.add_conditional_edges("safe_order_tools", route_safe_order_tools,
+        {"__end__": END, "order": "order"})
     builder.add_edge("sensitive_order_tools", "order")
     
     # Khởi tạo Postgres Checkpointer để lưu state vĩnh viễn (giữ nguyên config mặc định của LangGraph)

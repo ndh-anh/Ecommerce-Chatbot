@@ -9,6 +9,15 @@ using TypeSpec.OpenAPI;
 @route("/search")
 namespace Product.Search {
     @get
+    @route("/suggestions")
+    @operationId("suggestSearchKeywords")
+    @tag("search")
+    @extension("x-public", true)
+    op suggestSearchKeywords(
+        ...SuggestSearchKeywordsRequestParams,
+    ): SearchKeywordSuggestionsResponse200 | BadRequestError | ServiceUnavailableError | InternalServerError;
+
+    @get
     @route("")
     @operationId("searchProducts")
     @tag("search")

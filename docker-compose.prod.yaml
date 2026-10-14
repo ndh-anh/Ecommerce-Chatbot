@@ -65,7 +65,13 @@ services:
         condition: service_healthy
     healthcheck:
       <<: *healthcheck
-      test: ["CMD", "node", "-e", "const s=require('net').connect(8080,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const s=require('net').connect(8080,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))",
+        ]
 
   frontend:
     <<: *service
@@ -89,7 +95,13 @@ services:
         condition: service_healthy
     healthcheck:
       <<: *healthcheck
-      test: ["CMD", "node", "-e", "const s=require('net').connect(3000,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const s=require('net').connect(3000,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))",
+        ]
 
   order:
     <<: *service
@@ -103,7 +115,13 @@ services:
       - "50052"
     healthcheck:
       <<: *healthcheck
-      test: ["CMD", "node", "-e", "const s=require('net').connect(50052,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const s=require('net').connect(50052,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))",
+        ]
 
   search:
     <<: *service
@@ -122,7 +140,13 @@ services:
         condition: service_healthy
     healthcheck:
       <<: *healthcheck
-      test: ["CMD", "node", "-e", "const s=require('net').connect(50053,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const s=require('net').connect(50053,'127.0.0.1',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))",
+        ]
 
   elasticsearch:
     <<: *service
@@ -142,7 +166,11 @@ services:
       - es_data:/usr/share/elasticsearch/data
     healthcheck:
       <<: *healthcheck
-      test: ["CMD-SHELL", "curl -fsS 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s' | grep -Eq '\"status\"[[:space:]]*:[[:space:]]*\"(green|yellow)\"'"]
+      test:
+        [
+          "CMD-SHELL",
+          'curl -fsS ''http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s'' | grep -Eq ''"status"[[:space:]]*:[[:space:]]*"(green|yellow)"''',
+        ]
       timeout: 10s
       start_period: 90s
 
@@ -169,23 +197,29 @@ services:
         condition: service_healthy
     healthcheck:
       <<: *healthcheck
-      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 50054), timeout=3).close()"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import socket; socket.create_connection(('127.0.0.1', 50054), timeout=3).close()",
+        ]
 
-  # Optional one-off migration against Supabase; excluded from normal startup.
-  liquibase:
-    image: liquibase/liquibase:4.33
-    profiles: ["migration"]
-    environment:
-      LIQUIBASE_COMMAND_URL: ${LIQUIBASE_URL:-jdbc:postgresql://${DB_HOST}:${DB_PORT:-5432}/${DB_NAME:-postgres}?sslmode=require}
-      LIQUIBASE_COMMAND_USERNAME: ${DB_USERNAME}
-      LIQUIBASE_COMMAND_PASSWORD: ${DB_PASSWORD}
-      LIQUIBASE_COMMAND_CHANGELOG_FILE: db.changelog-master.yaml
-      LIQUIBASE_SEARCH_PATH: /liquibase/changelog
-    volumes:
-      - ./packages/e-commerce-db/changelog:/liquibase/changelog:ro
-    command: ["update", "-DadminPassword=${ADMIN_PASSWORD:-}"]
-    networks:
-      - e-commerce-network-prod
+  # # Optional one-off migration against Supabase; excluded from normal startup.
+  # liquibase:
+  #   image: liquibase/liquibase:4.33
+  #   profiles: ["migration"]
+  #   environment:
+  #     LIQUIBASE_COMMAND_URL: ${LIQUIBASE_URL:-jdbc:postgresql://${DB_HOST}:${DB_PORT:-5432}/${DB_NAME:-postgres}?sslmode=require}
+  #     LIQUIBASE_COMMAND_USERNAME: ${DB_USERNAME}
+  #     LIQUIBASE_COMMAND_PASSWORD: ${DB_PASSWORD}
+  #     LIQUIBASE_COMMAND_CHANGELOG_FILE: db.changelog-master.yaml
+  #     LIQUIBASE_SEARCH_PATH: /liquibase/changelog
+  #   volumes:
+  #     - ./packages/e-commerce-db/changelog:/liquibase/changelog:ro
+  #   command: ["update", "-DadminPassword=${ADMIN_PASSWORD:-}"]
+  #   networks:
+  #     - e-commerce-network-prod
 
 networks:
   e-commerce-network-prod:

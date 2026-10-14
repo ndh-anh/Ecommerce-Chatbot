@@ -144,12 +144,26 @@ class ToolStateTests(unittest.TestCase):
             AIMessage(content="Found")]
         class Snapshot:
             values = {"messages": messages}
+            next = ()
         class Agent:
             def get_state(self, config):
                 """Return a checkpoint fixture."""
                 return Snapshot()
         history = ChatService(Agent()).get_chat_history("session", "user")
         self.assertEqual(json.loads(history[-1]["data"])["data"][0], PRODUCT)
+
+    def test_history_serializes_plain_text_tool_results(self):
+        messages = [HumanMessage(content="đặt hàng"), ToolMessage(
+            content="Đặt hàng thành công", tool_call_id="place1", name="place_order_tool"),
+            AIMessage(content="Đã đặt hàng")]
+        class Snapshot:
+            values = {"messages": messages}
+            next = ()
+        class Agent:
+            def get_state(self, config):
+                return Snapshot()
+        history = ChatService(Agent()).get_chat_history("s", "u")
+        self.assertEqual(json.loads(history[-1]["data"]), "Đặt hàng thành công")
 
     def test_chat_response_keeps_full_frontend_data(self):
         """The live response uses original payloads despite compact tool content."""
@@ -172,6 +186,28 @@ class ToolStateTests(unittest.TestCase):
             result = ChatService(Agent()).process_query("find", "s", "u")
         self.assertEqual(result["type"], "get_products")
         self.assertEqual(result["data"]["data"][0], PRODUCT)
+        factory.assert_not_called()
+
+    def test_customer_form_is_returned_and_restored_without_model_call(self):
+        from app.tools.request_customer_info import request_customer_info
+        graph = tool_graph([request_customer_info])
+        config = {"configurable": {"thread_id": "form", "user_id": "u"}}
+        graph.invoke({"messages": [HumanMessage(content="mua 2 cái"), AIMessage(
+            content="", tool_calls=[call("request_customer_info", {"product_id": "v1", "quantity": 2})]
+        )]}, config)
+        class Agent:
+            def get_state(self, supplied):
+                return graph.get_state(supplied)
+            def invoke(self, input, config):
+                return graph.get_state(config).values
+            def update_state(self, supplied, update):
+                return graph.update_state(supplied, update)
+        service = ChatService(Agent())
+        result = service.process_query("mua", "form", "u")
+        self.assertEqual(result["data"]["form"], "customer_info")
+        self.assertNotIn('{', result["message"])
+        restored = service.get_chat_history("form", "u")
+        self.assertEqual(json.loads(restored[-1]["data"])["quantity"], 2)
 
     def test_unknown_product_details_does_not_invent_data(self):
         """Missing cached product facts produce an explicit lookup instruction."""
@@ -222,6 +258,8 @@ class ToolStateTests(unittest.TestCase):
         service = ChatService(graph)
         self.assertEqual(service.process_query("cancel", "confirm", "u")["type"], "CONFIRM_cancel_order_tool")
         self.assertEqual(executions, [])
+        history = service.get_chat_history("confirm", "u")
+        self.assertTrue(json.loads(history[-1]["data"])["confirmation"])
         service.process_query("yes", "confirm", "u", confirm=True)
         self.assertEqual(executions, ["o1"])
         state = graph.get_state({"configurable": {"thread_id": "confirm"}}).values
@@ -239,6 +277,17 @@ class ToolStateTests(unittest.TestCase):
         self.assertEqual(state["action_status"], "rejected")
         self.assertEqual(state["pending_actions"], [])
         self.assertIsNone(state["order_draft"])
+
+    def test_failed_sensitive_action_is_not_recorded_as_successful(self):
+        @tool
+        def place_order_tool(product_id: str) -> dict:
+            """Reject invalid recipient details."""
+            return {"success": False, "message": "Thông tin nhận hàng chưa hợp lệ"}
+        result = tool_graph([place_order_tool]).invoke({"messages": [
+            AIMessage(content="", tool_calls=[call("place_order_tool", {"product_id": "v1"})])
+        ]}, {"configurable": {"thread_id": "invalid_order"}})
+        self.assertEqual(result["action_status"], "failed")
+        self.assertEqual(result["pending_actions"], [])
 
 
 if __name__ == "__main__":

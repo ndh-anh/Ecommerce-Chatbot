@@ -24,6 +24,7 @@ describe('Search endpoint authorization', () => {
     controller: typeof BaseSearchController | typeof BaseProductsController,
     handler:
       | typeof BaseSearchController.prototype.searchProducts
+      | typeof BaseSearchController.prototype.suggestSearchKeywords
       | typeof BaseProductsController.prototype.getProducts,
     headers = {},
   ): ExecutionContext {
@@ -35,6 +36,19 @@ describe('Search endpoint authorization', () => {
   }
 
   beforeEach(() => jest.clearAllMocks());
+
+  it('allows guests to fetch keyword suggestions without verifying stale tokens', async () => {
+    await expect(
+      guard.canActivate(
+        context(
+          BaseSearchController,
+          BaseSearchController.prototype.suggestSearchKeywords,
+          { authorization: 'Bearer expired' },
+        ),
+      ),
+    ).resolves.toBe(true);
+    expect(jwt.extractAccessTokenPayload).not.toHaveBeenCalled();
+  });
 
   it('allows guests to search without attempting token verification', async () => {
     await expect(

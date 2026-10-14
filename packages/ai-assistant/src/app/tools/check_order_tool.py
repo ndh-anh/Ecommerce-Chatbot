@@ -1,4 +1,5 @@
 from langchain_core.tools import tool
+from app.utils.request_budget import rpc_timeout
 from app.clients.order_client import order_client_manager
 from app.buf.generated.order.v1 import order_pb2
 
@@ -15,7 +16,7 @@ def check_order_tool(order_id: str) -> str:
     client = order_client_manager.get_client()
     try:
         request = order_pb2.GetOrderRequest(order_id=order_id)
-        response = client.GetOrder(request)
+        response = client.GetOrder(request, timeout=rpc_timeout())
         if response.status == 'NOT_FOUND':
             return json.dumps({
                 "status": "NOT_FOUND",

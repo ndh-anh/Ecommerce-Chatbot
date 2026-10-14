@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '@/common/services/prisma.service';
-import { Prisma } from 'generated/prisma/client';
+import type { Prisma, events } from 'generated/prisma/client';
 import type {
   PostEventBody,
   GetEventsQueryParams,
@@ -16,7 +16,10 @@ export class EventsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Read a bounded page with a deterministic order and optional public visibility filter. */
-  async list(query: GetEventsQueryParams, publicOnly = false) {
+  async list(
+    query: GetEventsQueryParams,
+    publicOnly = false,
+  ): Promise<{ events: events[]; totalCount: number; totalPages: number }> {
     const where: Prisma.eventsWhereInput = {
       ...(publicOnly ? { is_published: true } : {}),
       ...(query.title
@@ -56,7 +59,7 @@ export class EventsRepository {
   }
 
   /** Only active published events opted into the carousel can appear on the homepage. */
-  carousel(now: Date) {
+  carousel(now: Date): Prisma.PrismaPromise<events[]> {
     return this.prisma.events.findMany({
       where: {
         is_published: true,
@@ -70,7 +73,10 @@ export class EventsRepository {
   }
 
   /** Return admin details or a published public event, otherwise respond with 404. */
-  async find(key: { id: string } | { slug: string }, publicOnly = false) {
+  async find(
+    key: { id: string } | { slug: string },
+    publicOnly = false,
+  ): Promise<events> {
     const event = await this.prisma.events.findFirst({
       where: { ...key, ...(publicOnly ? { is_published: true } : {}) },
     });
@@ -78,7 +84,7 @@ export class EventsRepository {
     return event;
   }
 
-  private data(input: PostEventBody) {
+  private data(input: PostEventBody): Omit<Prisma.eventsCreateInput, 'id'> {
     return {
       title: input.title,
       slug: input.slug,
@@ -94,19 +100,19 @@ export class EventsRepository {
   }
 
   /** Create an event; the database enforces slug uniqueness and a valid date range. */
-  create(input: PostEventBody) {
+  create(input: PostEventBody): Prisma.PrismaPromise<events> {
     return this.prisma.events.create({
       data: { id: randomUUID(), ...this.data(input) },
     });
   }
 
   /** Persist a complete validated event after merging a partial update. */
-  update(id: string, input: PostEventBody) {
+  update(id: string, input: PostEventBody): Prisma.PrismaPromise<events> {
     return this.prisma.events.update({ where: { id }, data: this.data(input) });
   }
 
   /** Remove a single event after the admin confirms deletion. */
-  async delete(id: string) {
+  async delete(id: string): Promise<void> {
     await this.prisma.events.delete({ where: { id } });
   }
 }

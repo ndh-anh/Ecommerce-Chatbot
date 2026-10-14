@@ -1,14 +1,24 @@
 // Recovery uses the same versioned outbox path as normal writes.
 const { Client } = require("pg");
+const { readFileSync } = require("node:fs");
 require("dotenv").config();
+// Verify TLS by default; no-verify is an explicit opt-in for temporary syncs.
+const ssl =
+  process.env.PGSSLMODE === "disable"
+    ? false
+    : {
+        rejectUnauthorized: process.env.PGSSLMODE !== "no-verify",
+        ...(process.env.PGSSLROOTCERT
+          ? { ca: readFileSync(process.env.PGSSLROOTCERT, "utf8") }
+          : {}),
+      };
 const client = new Client({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT || 5432),
   database: process.env.DB_NAME,
   user: process.env.DB_USERNAME || process.env.POSTGRES_USER,
   password: process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD,
-  ssl:
-    process.env.PGSSLMODE === "disable" ? false : { rejectUnauthorized: true },
+  ssl,
 });
 
 async function run() {

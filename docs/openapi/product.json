@@ -2422,6 +2422,65 @@
         "x-public": true
       }
     },
+    "/api/v1/search/suggestions": {
+      "get": {
+        "operationId": "suggestSearchKeywords",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SuggestSearchKeywordsRequestParams.keyword"
+          },
+          {
+            "$ref": "#/components/parameters/SuggestSearchKeywordsRequestParams.limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchKeywordSuggestionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "search"
+        ],
+        "x-public": true
+      }
+    },
     "/api/v1/user/products": {
       "get": {
         "operationId": "getUserProducts",
@@ -3334,6 +3393,30 @@
         "required": false,
         "schema": {
           "type": "string"
+        },
+        "explode": false
+      },
+      "SuggestSearchKeywordsRequestParams.keyword": {
+        "name": "keyword",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "explode": false
+      },
+      "SuggestSearchKeywordsRequestParams.limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 6
         },
         "explode": false
       }
@@ -4551,6 +4634,20 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ProductResponse"
+            }
+          }
+        }
+      },
+      "SearchKeywordSuggestionsResponse": {
+        "type": "object",
+        "required": [
+          "suggestions"
+        ],
+        "properties": {
+          "suggestions": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         }

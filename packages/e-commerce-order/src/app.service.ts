@@ -201,6 +201,8 @@ export class AppService {
           id: orderId,
           user_id: userId,
           status: 'CREATED',
+          shipping_address: data.shippingAddress,
+          payment_method: data.paymentMethod,
           total_amount: totalAmount,
           final_amount: totalAmount,
           created_at: new Date(),

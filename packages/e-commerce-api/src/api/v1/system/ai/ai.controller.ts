@@ -22,14 +22,14 @@ export class AiController implements BaseAiControllerInterface {
     const userId = this.clsService.userId;
     const grpcResponse = await this.aiService.chat(
       requestBody.message,
-      requestBody.sessionId,
+      requestBody.sessionId || userId,
       userId,
       requestBody.confirm,
     );
 
     return {
       message: grpcResponse.message,
-      data: grpcResponse.data ? JSON.parse(grpcResponse.data) : null,
+      data: this.aiService.parseToolData(grpcResponse.data),
       sessionId: grpcResponse.sessionId,
       type: grpcResponse.type,
     };
@@ -37,7 +37,7 @@ export class AiController implements BaseAiControllerInterface {
 
   async getAiChatHistory(): Promise<GetAiChatHistory200Response> {
     const userId = this.clsService.userId;
-    const sessionId = 'default_session'; // For now we use default session
+    const sessionId = userId || 'default_session';
 
     const grpcResponse = await this.aiService.getChatHistory(
       sessionId,
@@ -46,11 +46,11 @@ export class AiController implements BaseAiControllerInterface {
 
     return {
       messages: grpcResponse.messages
-        ? grpcResponse.messages.map((m: any) => ({
+        ? grpcResponse.messages.map((m) => ({
             id: m.id,
             sender: m.sender,
             text: m.text,
-            data: m.data ? JSON.parse(m.data as string) : null,
+            data: this.aiService.parseToolData(m.data),
           }))
         : [],
     };

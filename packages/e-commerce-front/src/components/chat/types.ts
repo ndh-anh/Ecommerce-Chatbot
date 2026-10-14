@@ -3,4 +3,5 @@ export interface Message {
   sender: "user" | "ai";
   text: string;
   data?: any;
+  type?: string;
 }

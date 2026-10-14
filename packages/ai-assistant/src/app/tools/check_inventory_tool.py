@@ -1,4 +1,5 @@
 from langchain_core.tools import tool
+from app.utils.request_budget import rpc_timeout
 from app.clients.inventory_client import inventory_client_manager
 from app.buf.generated.product.v1 import product_pb2
 
@@ -14,7 +15,7 @@ def check_inventory_tool(product_id: str) -> dict:
     try:
         client = inventory_client_manager.get_client()
         request = product_pb2.GetProductInventoryRequest(productId=product_id)
-        response = client.GetProductInventory(request)
+        response = client.GetProductInventory(request, timeout=rpc_timeout())
 
         if not response.variants:
             return {

@@ -5,10 +5,10 @@ import {
   useGetProductBySlugSuspense,
 } from "@e-commerce/api-client/endpoints/product";
 import {
-  getCart,
   usePostCart,
   usePostCartItem,
   getGetCartQueryKey,
+  getGetCartItemsQueryKey,
 } from "@e-commerce/api-client/endpoints/cart";
 import {
   getWishlists,
@@ -19,6 +19,7 @@ import {
   getGetWishlistItemsQueryKey,
 } from "@e-commerce/api-client/endpoints/customer";
 import { useQueryClient } from "@tanstack/react-query";
+import { cartQueryOptions } from "@/hooks/useCart";
 import { useUser } from "@/providers/UserProvider/UserProvider";
 import Box from "@mui/material/Box";
 
@@ -42,8 +43,6 @@ import { BrandChip } from "./BrandChip";
 import { FavoriteButton } from "./FavoriteButton";
 import { ProductGallery } from "./ProductGallery";
 import { ProductReviews } from "./ProductReviews";
-
-const STATUS_NOT_FOUND = 404;
 
 const formatPrice = (value: number | string) => {
   const n = typeof value === "string" ? Number.parseFloat(value) : value;
@@ -111,22 +110,14 @@ const ProductDetail = ({ slug }: { slug: string }) => {
     }
 
     try {
-      let cartId: string;
-      try {
-        const cart = await queryClient.fetchQuery({
+      const cart = await queryClient.fetchQuery(cartQueryOptions(userId));
+      let cartId = cart?.cartId;
+      if (!cartId) {
+        const newCart = await postCartMutation.mutateAsync({ data: { userId } });
+        cartId = newCart.cartId;
+        await queryClient.invalidateQueries({
           queryKey: getGetCartQueryKey({ userId }),
-          queryFn: () => getCart({ userId }),
         });
-        cartId = cart.cartId;
-      } catch (error: any) {
-        const status = error?.response?.status || error?.status;
-        if (status === STATUS_NOT_FOUND || String(error).includes("404")) {
-          const newCart = await postCartMutation.mutateAsync({ data: { userId } });
-          cartId = newCart.cartId;
-          queryClient.setQueryData(getGetCartQueryKey({ userId }), newCart);
-        } else {
-          throw error;
-        }
       }
 
       await postCartItemMutation.mutateAsync({
@@ -135,6 +126,10 @@ const ProductDetail = ({ slug }: { slug: string }) => {
           productVariantId: activeVariant.productVariantId,
           quantity: 1,
         },
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: getGetCartItemsQueryKey(cartId),
       });
 
       enqueueSnackbar("Sản phẩm đã được thêm vào giỏ hàng thành công!", {

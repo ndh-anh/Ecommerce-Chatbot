@@ -130,6 +130,8 @@ model orders {
   total_discount Decimal?         @default(0) @db.Decimal(18, 2)
   final_amount   Decimal?         @db.Decimal(18, 2)
   created_at     DateTime?        @db.Timestamp(6)
+  shipping_address String?        @db.Text
+  payment_method   String?        @db.VarChar(50)
   order_items    order_items[]
   order_vouchers order_vouchers[]
   users          users            @relation(fields: [user_id], references: [uid], onDelete: NoAction, onUpdate: NoAction, map: "fk_orders_user")

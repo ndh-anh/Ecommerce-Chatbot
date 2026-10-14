@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { isAxiosError } from "axios";
 import { useAuth } from "@/hooks/useAuth";
 
 import ChatIcon from "@mui/icons-material/Chat";
@@ -14,6 +15,8 @@ import {
   Paper,
   InputBase,
   CircularProgress,
+  Alert,
+  Button,
 } from "@mui/material";
 
 import { usePostAiChat } from "@e-commerce/api-client/endpoints/system";
@@ -23,47 +26,58 @@ import { getGetAiChatHistorySuspenseQueryOptions } from "@e-commerce/api-client/
 import type { Message } from "./types";
 import ChatMessageItem from "./ChatMessageItem";
 
-const ChatWidget = () => {
+const HTTP_CONFLICT_STATUS = 409;
+
+const WELCOME_MESSAGES: Message[] = [
+  {
+    id: "welcome",
+    sender: "ai",
+    text: "Xin chào! Tôi có thể giúp gì cho bạn?",
+  },
+];
+
+const ChatWidgetSession = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { token, isInitialized } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      sender: "ai",
-      text: "Xin chào! Tôi có thể giúp gì cho bạn?",
-    },
-  ]);
+  const { token, isInitialized, userId } = useAuth();
+  const [sessionMessages, setMessages] = useState<Message[] | null>(null);
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const chatMutation = usePostAiChat();
+  const chatMutation = usePostAiChat({
+    request: { timeout: 100_000 },
+    mutation: { retry: false },
+  });
+  const sendingRef = useRef(false);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const { data: historyData } = useQuery({
-    ...getGetAiChatHistorySuspenseQueryOptions(),
-    enabled: Boolean(token && isInitialized && isOpen),
+  const historyOptions = getGetAiChatHistorySuspenseQueryOptions({
+    request: { timeout: 15_000 },
+  });
+  const {
+    data: historyData,
+    isLoading: isHistoryLoading,
+    isError: isHistoryError,
+    refetch: refetchHistory,
+    isFetching: isHistoryFetching,
+  } = useQuery({
+    ...historyOptions,
+    queryKey: [...historyOptions.queryKey, userId],
+    enabled: Boolean(token && userId && isInitialized && isOpen),
+    retry: false,
   });
 
-  const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
-
-  if (
-    historyData?.messages &&
-    historyData.messages.length > 0 &&
-    !isHistoryLoaded
-  ) {
-    setIsHistoryLoaded(true);
-    setMessages(historyData.messages as any[]);
-  }
+  const messages =
+    sessionMessages ??
+    (historyData?.messages.length
+      ? (historyData.messages as Message[])
+      : WELCOME_MESSAGES);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const sendMessage = async (text: string, confirm?: boolean) => {
-    if (!text.trim() || chatMutation.isPending) return;
+    if (!text.trim() || sendingRef.current || !userId || isHistoryLoading)
+      return;
+    sendingRef.current = true;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -71,7 +85,7 @@ const ChatWidget = () => {
       text: text,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...(prev ?? messages), userMessage]);
 
     try {
       const payload: any = { message: userMessage.text };
@@ -88,16 +102,23 @@ const ChatWidget = () => {
         sender: "ai",
         text: response.message,
         data: response.data,
+        type: response.type,
       };
-      setMessages((prev) => [...prev, aiMessage]);
+      setMessages((prev) => [...(prev ?? []), aiMessage]);
     } catch (error) {
       console.error("Chat error", error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: "ai",
-        text: "Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.",
+        text:
+          isAxiosError(error) && error.response?.status === HTTP_CONFLICT_STATUS
+            ? "Yêu cầu trước vẫn đang xử lý. Vui lòng chờ rồi tải lại lịch sử trò chuyện."
+            : "Trợ lý chưa thể hoàn thành yêu cầu. Nếu bạn vừa xác nhận đặt hàng, hãy kiểm tra lịch sử đơn hàng trước khi gửi lại.",
+        type: "CHAT_ERROR",
       };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => [...(prev ?? []), errorMessage]);
+    } finally {
+      sendingRef.current = false;
     }
   };
 
@@ -113,7 +134,14 @@ const ChatWidget = () => {
   if (!isInitialized) return null;
 
   return (
-    <Box sx={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999 }}>
+    <Box
+      sx={{
+        position: "fixed",
+        bottom: { xs: 1, sm: 3 },
+        right: { xs: 1, sm: 3 },
+        zIndex: 9999,
+      }}
+    >
       {!isOpen && (
         <Fab
           aria-label="chat"
@@ -136,7 +164,7 @@ const ChatWidget = () => {
         <Paper
           elevation={12}
           sx={{
-            width: { xs: 350, sm: 400 },
+            width: { xs: "calc(100vw - 16px)", sm: 400 },
             height: 500,
             maxHeight: "80vh",
             display: "flex",
@@ -196,13 +224,40 @@ const ChatWidget = () => {
               </Box>
             ) : (
               <>
-                {messages.map((msg) => (
+                {isHistoryLoading && (
+                  <Typography variant="regularS">
+                    Đang tải lịch sử trò chuyện…
+                  </Typography>
+                )}
+                {isHistoryError && (
+                  <Alert severity="warning" sx={{ mb: 1 }}>
+                    Chưa tải được lịch sử. Bạn vẫn có thể gửi tin nhắn mới.
+                  </Alert>
+                )}
+                {messages.map((msg, index) => (
                   <ChatMessageItem
                     key={msg.id}
                     msg={msg}
                     onSendMessage={sendMessage}
+                    disabled={
+                      chatMutation.isPending || isHistoryLoading || !userId
+                    }
+                    isLatest={index === messages.length - 1}
                   />
                 ))}
+                {(isHistoryError || messages.at(-1)?.type === "CHAT_ERROR") && (
+                  <Button
+                    disabled={isHistoryFetching || chatMutation.isPending}
+                    onClick={async () => {
+                      const result = await refetchHistory();
+                      if (!result.isError && result.data?.messages) {
+                        setMessages(result.data.messages as Message[]);
+                      }
+                    }}
+                  >
+                    Tải lại lịch sử trò chuyện
+                  </Button>
+                )}
                 {chatMutation.isPending && (
                   <Box
                     sx={{
@@ -215,6 +270,13 @@ const ChatWidget = () => {
                       size={20}
                       sx={{ color: "grey.500", ml: 2 }}
                     />
+                    <Typography
+                      variant="regularS"
+                      color="text.secondary"
+                      sx={{ ml: 1 }}
+                    >
+                      Trợ lý đang xử lý…
+                    </Typography>
                   </Box>
                 )}
                 <div ref={messagesEndRef} />
@@ -250,11 +312,18 @@ const ChatWidget = () => {
                   placeholder="Nhập tin nhắn..."
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  disabled={chatMutation.isPending}
+                  disabled={
+                    chatMutation.isPending || isHistoryLoading || !userId
+                  }
                 />
                 <IconButton
                   type="submit"
-                  disabled={!inputValue.trim() || chatMutation.isPending}
+                  disabled={
+                    !inputValue.trim() ||
+                    chatMutation.isPending ||
+                    isHistoryLoading ||
+                    !userId
+                  }
                   sx={{
                     bgcolor: "common.black",
                     color: "common.white",
@@ -279,4 +348,8 @@ const ChatWidget = () => {
   );
 };
 
-export default ChatWidget;
+export default function ChatWidget() {
+  const { userId } = useAuth();
+  // Mount a separate widget per account so late replies cannot leak into another session.
+  return <ChatWidgetSession key={userId || "anonymous"} />;
+}

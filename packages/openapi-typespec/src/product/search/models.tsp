@@ -34,3 +34,19 @@ model SearchProductsResponse200 {
     @statusCode statusCode: 200;
     @body body: SearchProductsResponse;
 }
+
+model SuggestSearchKeywordsRequestParams {
+    @query @minLength(2) @maxLength(100)
+    keyword: string;
+    @query @minValue(1) @maxValue(10)
+    limit?: int32 = 6;
+}
+
+model SearchKeywordSuggestionsResponse {
+    suggestions: string[];
+}
+
+model SearchKeywordSuggestionsResponse200 {
+    @statusCode statusCode: 200;
+    @body body: SearchKeywordSuggestionsResponse;
+}

@@ -5,6 +5,18 @@ interface ChatOrderCardProps {
   order: any;
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  CREATED: "Đã tạo",
+  PENDING: "Chờ xử lý",
+  CONFIRMED: "Đã xác nhận",
+  PAID: "Đã thanh toán",
+  SHIPPED: "Đang giao",
+  COMPLETED: "Hoàn thành",
+  CANCELLED: "Đã hủy",
+  NOT_FOUND: "Không tìm thấy",
+  ERROR: "Chưa thành công",
+};
+
 const getStatusColor = (status: string) => {
   switch (status?.toLowerCase()) {
     case "pending":
@@ -44,7 +56,11 @@ const ChatOrderCard: React.FC<ChatOrderCardProps> = ({ order }) => {
           </Typography>
           <Chip
             size="small"
-            label={order.status?.toUpperCase() || "UNKNOWN"}
+            label={
+              STATUS_LABELS[order.status?.toUpperCase()] ||
+              order.status ||
+              "Chưa có trạng thái"
+            }
             color={getStatusColor(order.status) as any}
             sx={{ fontSize: "0.7rem", height: 20 }}
           />
@@ -54,54 +70,69 @@ const ChatOrderCard: React.FC<ChatOrderCardProps> = ({ order }) => {
           ID: <b>{order.orderId || order.id}</b>
         </Typography>
 
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-          <Typography variant="regularXs" color="text.secondary">
-            Tổng tiền:
-          </Typography>
-          <Typography variant="boldS">
-            {order.totalAmount
-              ? new Intl.NumberFormat("vi-VN", {
-                  style: "currency",
-                  currency: "VND",
-                }).format(order.totalAmount)
-              : "0 ₫"}
-          </Typography>
-        </Box>
+        {order.totalAmount !== undefined && (
+          <Box
+            sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}
+          >
+            <Typography variant="regularXs" color="text.secondary">
+              Tổng tiền:
+            </Typography>
+            <Typography variant="boldS">
+              {order.totalAmount
+                ? new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(order.totalAmount)
+                : "0 ₫"}
+            </Typography>
+          </Box>
+        )}
 
-        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-          <Typography variant="regularXs" color="text.secondary">
-            Giảm giá:
-          </Typography>
-          <Typography variant="regularS" color="error.main">
-            {order.totalDiscount
-              ? "-" +
-                new Intl.NumberFormat("vi-VN", {
-                  style: "currency",
-                  currency: "VND",
-                }).format(order.totalDiscount)
-              : "0 ₫"}
-          </Typography>
-        </Box>
+        {order.totalDiscount !== undefined && (
+          <Box
+            sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}
+          >
+            <Typography variant="regularXs" color="text.secondary">
+              Giảm giá:
+            </Typography>
+            <Typography variant="regularS" color="error.main">
+              {order.totalDiscount
+                ? "-" +
+                  new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(order.totalDiscount)
+                : "0 ₫"}
+            </Typography>
+          </Box>
+        )}
 
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            mt: 1,
-            pt: 1,
-            borderTop: "1px dashed #eee",
-          }}
-        >
-          <Typography variant="boldS">Thành tiền:</Typography>
-          <Typography variant="boldM" color="primary.main">
-            {order.finalAmount
-              ? new Intl.NumberFormat("vi-VN", {
-                  style: "currency",
-                  currency: "VND",
-                }).format(order.finalAmount)
-              : "0 ₫"}
+        {order.finalAmount !== undefined && (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mt: 1,
+              pt: 1,
+              borderTop: "1px dashed #eee",
+            }}
+          >
+            <Typography variant="boldS">Thành tiền:</Typography>
+            <Typography variant="boldM" color="primary.main">
+              {order.finalAmount
+                ? new Intl.NumberFormat("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  }).format(order.finalAmount)
+                : "0 ₫"}
+            </Typography>
+          </Box>
+        )}
+        {order.message && (
+          <Typography variant="regularS" sx={{ whiteSpace: "pre-wrap" }}>
+            {order.message}
           </Typography>
-        </Box>
+        )}
 
         {order.createdAt && (
           <Typography
